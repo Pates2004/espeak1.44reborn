@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(ProjectDir)..\..\..\src\compiledict.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\debug.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\dictionary.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\intonation.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\klatt.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\numbers.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\phonemelist.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\readclause.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\setlengths.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\synth_mbrola.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\synthdata.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\synthesize.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\tr_languages.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\translate.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\voices.cpp" />
+    <ClCompile Include="$(ProjectDir)..\..\..\src\wavegen.cpp" />
+  </ItemGroup>
+</Project>

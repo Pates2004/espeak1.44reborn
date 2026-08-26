@@ -1,0 +1,24 @@
+LIBRARY espeak_lib
+EXPORTS
+    espeak_Cancel
+    espeak_Char
+    espeak_CompileDictionary
+    espeak_GetCurrentVoice
+    espeak_GetParameter
+    espeak_Info
+    espeak_Initialize
+    espeak_IsPlaying
+    espeak_Key
+    espeak_ListVoices
+    espeak_SetParameter
+    espeak_SetPhonemeCallback
+    espeak_SetPhonemeTrace
+    espeak_SetPunctuationList
+    espeak_SetSynthCallback
+    espeak_SetUriCallback
+    espeak_SetVoiceByName
+    espeak_SetVoiceByProperties
+    espeak_Synchronize
+    espeak_Synth
+    espeak_Synth_Mark
+    espeak_Terminate

@@ -1,0 +1,11 @@
+# Local build output and IDE state
+build/
+.vs/
+*.user
+*.suo
+
+# Generated audio and local compiler intermediates
+*.wav
+*.obj
+*.pdb
+*.ilk
