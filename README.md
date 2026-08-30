@@ -1,13 +1,13 @@
-# eSpeak 1.44.05 Reborn — r20 (32-bit)
+# eSpeak 1.44.05 Reborn — r21 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r20 project:
+eSpeak r21 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r20` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r21` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
 
@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File platforms\windows\build-x86.ps1
 
 The script builds the command-line synthesizer, library, 32-bit SAPI engine
 and test application, compiles the Polish dictionary, stages the package and
-creates `build\x86\installer\setup_espeak-1.44.05-x86-r20.exe`.
+creates `build\x86\installer\setup_espeak-1.44.05-x86-r21.exe`.
 
 Use `-SkipInstaller` when only the binaries are needed.  `-SkipTests` skips
 the optional project smoke checks while retaining the normal compilation and

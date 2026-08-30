@@ -4,7 +4,7 @@
 AppName=eSpeak
 AppId={{B0E0EE35-0C47-4C1A-A37D-82D12B0A6C32}
 AppVersion=1.44.05
-AppVerName=eSpeak version 1.44.05 r20 (32-bit)
+AppVerName=eSpeak version 1.44.05 r21 (32-bit)
 AppCopyright=Licensed under GNU General Public License version 3.   (See file License.txt for details).
 WizardStyle=modern
 PrivilegesRequired=admin
@@ -13,14 +13,14 @@ ArchitecturesAllowed=x86compatible
 DefaultDirName={autopf}\eSpeak
 DefaultGroupName=eSpeak
 OutputDir=..\..\build\x86\installer
-OutputBaseFilename=setup_espeak-1.44.05-x86-r20
+OutputBaseFilename=setup_espeak-1.44.05-x86-r21
 Compression=lzma2/ultra64
 SolidCompression=yes
 ShowLanguageDialog=auto
 UninstallDisplayIcon={app}\TTSApp.exe
 VersionInfoVersion=1.44.5.0
 VersionInfoProductName=eSpeak
-VersionInfoDescription=eSpeak 1.44.05 r20 native 32-bit installer
+VersionInfoDescription=eSpeak 1.44.05 r21 native 32-bit installer
 
 [InstallDelete]
 Type: files; Name: "{app}\espeak.dll"

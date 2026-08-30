@@ -118,7 +118,7 @@ HRESULT RegisterServer()
         L"CLSID\\{BE985C8D-BE32-4A22-AA93-55C16A6D1D91}\\InprocServer32";
 
     HRESULT result = SetRegistryString(HKEY_CLASSES_ROOT, kClsidKey, nullptr,
-                                       L"eSpeak SAPI 5 Engine (64-bit)");
+                                       L"eSpeak SAPI 5 Engine (32-bit)");
     if (SUCCEEDED(result))
         result = SetRegistryString(HKEY_CLASSES_ROOT, kInprocKey, nullptr, module_path);
     if (SUCCEEDED(result))

@@ -20,6 +20,9 @@ itp	$abbrev
 etc	$abbrev
 via	f'aw||i||a
 
+// Exact colloquial word: keep hard z before i ("ziko", not "źiko").
+ziko	z_,ikO
+
 _0		z'ERO:
 _1		j'EdEn
 _2		dv'a
