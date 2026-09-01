@@ -8,8 +8,8 @@
     <AssemblyName>Vario</AssemblyName>
     <RootNamespace>Vario</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.44.5.24</Version>
-    <FileVersion>1.44.5.24</FileVersion>
+    <Version>1.44.5.25</Version>
+    <FileVersion>1.44.5.25</FileVersion>
     <AssemblyVersion>1.44.5.0</AssemblyVersion>
     <Product>Vario for eSpeak</Product>
     <Authors>Pates2004</Authors>

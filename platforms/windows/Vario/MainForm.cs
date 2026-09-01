@@ -5,16 +5,14 @@ internal sealed class MainForm : Form
     private const int MaximumVoiceCount = 200;
 
     private readonly RegistryService registry = new();
-    private readonly TreeView availableTree = new()
+    private readonly TriStateTreeView availableTree = new()
     {
-        CheckBoxes = true,
         FullRowSelect = true,
         HideSelection = false,
         ShowNodeToolTips = true
     };
-    private readonly TreeView installedTree = new()
+    private readonly TriStateTreeView installedTree = new()
     {
-        CheckBoxes = true,
         FullRowSelect = true,
         HideSelection = false,
         ShowNodeToolTips = true
@@ -38,7 +36,6 @@ internal sealed class MainForm : Form
     private Dictionary<string, int> baselineInflections = new(StringComparer.OrdinalIgnoreCase);
     private bool baselineSonic;
     private bool loading;
-    private bool suppressTreeChecks;
     private bool updatingInflection;
     private bool dirty;
     private bool allowClose;
@@ -99,18 +96,28 @@ internal sealed class MainForm : Form
             Padding = new Padding(10),
             Margin = new Padding(0, 0, 6, 0)
         };
-        TableLayoutPanel availableLayout = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
+        TableLayoutPanel availableLayout = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3 };
+        availableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         availableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         availableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        Label availableHelp = new()
+        {
+            Text = UiText.AvailableTreeHelp,
+            AutoSize = true,
+            MaximumSize = new Size(420, 0),
+            AccessibleRole = AccessibleRole.StaticText,
+            TabStop = false,
+            Margin = new Padding(0, 0, 0, 6)
+        };
         availableTree.Dock = DockStyle.Fill;
         availableTree.TabIndex = 0;
         availableTree.AccessibleName = UiText.AvailableGroup;
-        availableTree.AccessibleDescription = UiText.AvailableTreeHelp;
-        availableTree.AfterCheck += OnTreeAfterCheck;
+        availableTree.CheckStateChanged += OnTreeCheckStateChanged;
         Button addButton = new() { Text = UiText.AddSelected, AutoSize = true, Anchor = AnchorStyles.Right, TabIndex = 1 };
         addButton.Click += (_, _) => AddCheckedVoices();
-        availableLayout.Controls.Add(availableTree, 0, 0);
-        availableLayout.Controls.Add(addButton, 0, 1);
+        availableLayout.Controls.Add(availableHelp, 0, 0);
+        availableLayout.Controls.Add(availableTree, 0, 1);
+        availableLayout.Controls.Add(addButton, 0, 2);
         availableGroup.Controls.Add(availableLayout);
 
         GroupBox installedGroup = new()
@@ -120,20 +127,30 @@ internal sealed class MainForm : Form
             Padding = new Padding(10),
             Margin = new Padding(6, 0, 0, 0)
         };
-        TableLayoutPanel installedLayout = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
+        TableLayoutPanel installedLayout = new() { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3 };
+        installedLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         installedLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         installedLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        Label installedHelp = new()
+        {
+            Text = UiText.InstalledTreeHelp,
+            AutoSize = true,
+            MaximumSize = new Size(420, 0),
+            AccessibleRole = AccessibleRole.StaticText,
+            TabStop = false,
+            Margin = new Padding(0, 0, 0, 6)
+        };
         installedTree.Dock = DockStyle.Fill;
         installedTree.TabIndex = 2;
         installedTree.AccessibleName = UiText.InstalledGroup;
-        installedTree.AccessibleDescription = UiText.InstalledTreeHelp;
-        installedTree.AfterCheck += OnTreeAfterCheck;
+        installedTree.CheckStateChanged += OnTreeCheckStateChanged;
         installedTree.AfterSelect += (_, _) => UpdateInflectionEditor();
         installedTree.KeyDown += OnInstalledTreeKeyDown;
         Button removeButton = new() { Text = UiText.RemoveSelected, AutoSize = true, Anchor = AnchorStyles.Right, TabIndex = 3 };
         removeButton.Click += (_, _) => RemoveCheckedVoices();
-        installedLayout.Controls.Add(installedTree, 0, 0);
-        installedLayout.Controls.Add(removeButton, 0, 1);
+        installedLayout.Controls.Add(installedHelp, 0, 0);
+        installedLayout.Controls.Add(installedTree, 0, 1);
+        installedLayout.Controls.Add(removeButton, 0, 2);
         installedGroup.Controls.Add(installedLayout);
 
         treesLayout.Controls.Add(availableGroup, 0, 0);
@@ -273,7 +290,7 @@ internal sealed class MainForm : Form
                 if (choices.Count == 0)
                     continue;
 
-                TreeNode languageNode = new(voice) { Name = voice, ToolTipText = voice };
+                TreeNode languageNode = new(voice) { Name = voice, ToolTipText = voice, StateImageIndex = 0 };
                 foreach (string choice in choices)
                     languageNode.Nodes.Add(CreateVoiceNode(choice, installed: false));
                 availableTree.Nodes.Add(languageNode);
@@ -298,7 +315,7 @@ internal sealed class MainForm : Form
                 .GroupBy(BaseVoice, StringComparer.OrdinalIgnoreCase)
                 .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase))
             {
-                TreeNode languageNode = new(group.Key) { Name = group.Key, ToolTipText = group.Key };
+                TreeNode languageNode = new(group.Key) { Name = group.Key, ToolTipText = group.Key, StateImageIndex = 0 };
                 foreach (string voice in group.OrderBy(value => value, StringComparer.CurrentCultureIgnoreCase))
                     languageNode.Nodes.Add(CreateVoiceNode(voice, installed: true));
                 installedTree.Nodes.Add(languageNode);
@@ -321,7 +338,8 @@ internal sealed class MainForm : Form
         {
             Name = voice,
             Tag = new VoiceNodeData(voice),
-            ToolTipText = installed ? UiText.InflectionFor(voice, pendingInflections[voice]) : voice
+            ToolTipText = installed ? UiText.InflectionFor(voice, pendingInflections[voice]) : voice,
+            StateImageIndex = 0
         };
     }
 
@@ -465,49 +483,46 @@ internal sealed class MainForm : Form
         }
     }
 
-    private void OnTreeAfterCheck(object? sender, TreeViewEventArgs e)
+    private void OnTreeCheckStateChanged(object? sender, TreeViewEventArgs e)
     {
-        if (suppressTreeChecks)
+        if (sender is not TriStateTreeView tree || e.Node is not TreeNode node)
             return;
-        suppressTreeChecks = true;
-        try
-        {
-            TreeNode? node = e.Node;
-            if (node is null)
-                return;
-            if (node.Nodes.Count > 0)
-                SetDescendantChecks(node, node.Checked);
-            else
-                UpdateParentCheck(node.Parent);
-        }
-        finally
-        {
-            suppressTreeChecks = false;
-        }
+        if (node.Nodes.Count > 0)
+            SetDescendantChecks(tree, node, tree.GetCheckState(node));
+        else
+            UpdateParentCheck(tree, node.Parent);
     }
 
-    private static void SetDescendantChecks(TreeNode node, bool value)
+    private static void SetDescendantChecks(TriStateTreeView tree, TreeNode node, TreeNodeCheckState state)
     {
         foreach (TreeNode child in node.Nodes)
         {
-            child.Checked = value;
-            SetDescendantChecks(child, value);
+            tree.SetCheckState(child, state);
+            SetDescendantChecks(tree, child, state);
         }
     }
 
-    private static void UpdateParentCheck(TreeNode? parent)
+    private static void UpdateParentCheck(TriStateTreeView tree, TreeNode? parent)
     {
         while (parent is not null)
         {
-            parent.Checked = parent.Nodes.Count > 0 && parent.Nodes.Cast<TreeNode>().All(node => node.Checked);
+            TreeNodeCheckState[] childStates = parent.Nodes.Cast<TreeNode>()
+                .Select(tree.GetCheckState)
+                .ToArray();
+            TreeNodeCheckState parentState = childStates.All(state => state == TreeNodeCheckState.Checked)
+                ? TreeNodeCheckState.Checked
+                : childStates.All(state => state == TreeNodeCheckState.Unchecked)
+                    ? TreeNodeCheckState.Unchecked
+                    : TreeNodeCheckState.Partial;
+            tree.SetCheckState(parent, parentState);
             parent = parent.Parent;
         }
     }
 
-    private static IEnumerable<string> CheckedVoices(TreeView tree) =>
+    private static IEnumerable<string> CheckedVoices(TriStateTreeView tree) =>
         tree.Nodes.Cast<TreeNode>()
             .SelectMany(parent => parent.Nodes.Cast<TreeNode>())
-            .Where(node => node.Checked && node.Tag is VoiceNodeData)
+            .Where(node => tree.GetCheckState(node) == TreeNodeCheckState.Checked && node.Tag is VoiceNodeData)
             .Select(node => ((VoiceNodeData)node.Tag!).Value);
 
     private static IEnumerable<string> VoicesFromNode(TreeNode node)
