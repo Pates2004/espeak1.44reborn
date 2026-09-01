@@ -20,6 +20,7 @@
 #include "TtsEngObj.h"
 
 #include "../../../src/speak_lib.h"
+#include "../third_party/sonic/sonic.h"
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -72,6 +73,8 @@ size_t n_frag_offsets = 0;
 size_t frag_ix = 0;
 size_t frag_count=0;
 FRAG_OFFSET *frag_offsets = NULL;
+sonicStream sonic_stream = NULL;
+float sonic_speed = 1.0f;
 
 namespace {
 
@@ -129,9 +132,52 @@ bool CheckedMultiplySize(size_t left, size_t right, size_t* result)
 
 ULONGLONG AudioStreamOffset(uint64_t audio_position_ms)
 {
-	if((srate <= 0) || (audio_position_ms > ULLONG_MAX / (uint64_t)srate))
+	if(srate <= 0)
 		return ULLONG_MAX;
-	return (audio_position_ms * (uint64_t)srate) / 10u;
+	const long double scaled = ((long double)audio_position_ms * (long double)srate) /
+		(10.0L * ((sonic_speed > 1.0f) ? (long double)sonic_speed : 1.0L));
+	return (scaled >= (long double)ULLONG_MAX) ? ULLONG_MAX : (ULONGLONG)scaled;
+}
+
+bool IsSonicBoostEnabled()
+{
+	HKEY key = NULL;
+	DWORD value = 0;
+	DWORD type = 0;
+	DWORD size = sizeof(value);
+	if(RegOpenKeyExW(HKEY_LOCAL_MACHINE,L"SOFTWARE\\eSpeak\\Vario",0,KEY_QUERY_VALUE,&key) != ERROR_SUCCESS)
+		return false;
+	const LONG result = RegQueryValueExW(key,L"SonicBoost",NULL,&type,
+		reinterpret_cast<BYTE*>(&value),&size);
+	RegCloseKey(key);
+	return (result == ERROR_SUCCESS) && (type == REG_DWORD) && (value != 0);
+}
+
+float GetSonicSpeed()
+{
+	if(!IsSonicBoostEnabled() || (master_rate <= 0))
+		return 1.0f;
+	const int positive_rate = (master_rate > 10) ? 10 : master_rate;
+	return 1.0f + ((float)positive_rate * 0.2f);
+}
+
+int DrainSonicOutput()
+{
+	short output[4096];
+	while((sonic_stream != NULL) && (sonicSamplesAvailable(sonic_stream) > 0))
+	{
+		const int available = sonicSamplesAvailable(sonic_stream);
+		const int requested = (available > (int)(sizeof(output)/sizeof(output[0])))
+			? (int)(sizeof(output)/sizeof(output[0])) : available;
+		const int count = sonicReadShortFromStream(sonic_stream,output,requested);
+		if(count <= 0)
+			return 1;
+		const HRESULT result = m_OutputSite->Write(output,
+			(ULONG)((unsigned int)count*sizeof(short)),NULL);
+		if(FAILED(result))
+			return 1;
+	}
+	return 0;
 }
 
 uint64_t AddAudioPosition(uint64_t base, int position)
@@ -387,6 +433,12 @@ int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
 		return(0);
 	if((wav == NULL) || ((unsigned int)numsamples > (ULONG_MAX/sizeof(short))))
 		return(1);
+	if(sonic_stream != NULL)
+	{
+		if(!sonicWriteShortToStream(sonic_stream,wav,numsamples))
+			return(1);
+		return DrainSonicOutput();
+	}
 	hr = m_OutputSite->Write(wav,(ULONG)((unsigned int)numsamples*sizeof(short)),NULL);
 	return(FAILED(hr) ? 1 : 0);
 }
@@ -965,6 +1017,10 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 	HRESULT result = pOutputSite->GetEventInterest(&event_interest);
 	if(FAILED(result))
 		return result;
+	result = CheckActions(pOutputSite);
+	if(FAILED(result))
+		return result;
+	sonic_speed = GetSonicSpeed();
 
 	const int saved_volume = gVolume;
 	const int saved_speed = gSpeed;
@@ -1019,8 +1075,31 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 	if(text_characters > 0)
 	{
 		SynthesisContext context(this,pOutputSite);
-		if(espeak_Synth(TextBuf,0,0,POS_CHARACTER,0,
-			espeakCHARS_WCHAR | espeakKEEP_NAMEDATA | espeakPHONEMES,NULL,NULL) != EE_OK)
+		if(sonic_speed > 1.0f)
+		{
+			sonic_stream = sonicCreateStream(srate*50,1);
+			if(sonic_stream == NULL)
+			{
+				sonic_speed = 1.0f;
+				return E_OUTOFMEMORY;
+			}
+			sonicSetSpeed(sonic_stream,sonic_speed);
+		}
+
+		const espeak_ERROR synth_result = espeak_Synth(TextBuf,0,0,POS_CHARACTER,0,
+			espeakCHARS_WCHAR | espeakKEEP_NAMEDATA | espeakPHONEMES,NULL,NULL);
+		int sonic_result = 0;
+		if(sonic_stream != NULL)
+		{
+			if((synth_result == EE_OK) && !sonicFlushStream(sonic_stream))
+				sonic_result = 1;
+			if((sonic_result == 0) && (DrainSonicOutput() != 0))
+				sonic_result = 1;
+			sonicDestroyStream(sonic_stream);
+			sonic_stream = NULL;
+		}
+		sonic_speed = 1.0f;
+		if((synth_result != EE_OK) || (sonic_result != 0))
 			return E_FAIL;
 	}
 	return S_OK;

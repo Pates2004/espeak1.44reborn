@@ -21,7 +21,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>ESPEAK_BUILD_SAPI;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\windows_sapi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\windows_sapi;$(ProjectDir)..\third_party\sonic;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -32,6 +32,9 @@
   <Import Project="espeak-core.props" />
   <ItemGroup>
     <ClCompile Include="$(ProjectDir)..\..\..\src\speak_lib.cpp" />
+    <ClCompile Include="$(ProjectDir)..\third_party\sonic\sonic.c">
+      <DisableSpecificWarnings>4244;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="$(ProjectDir)..\windows_sapi\ttseng.cpp" />
     <ClCompile Include="$(ProjectDir)..\windows_sapi\ttsengobj.cpp" />
     <ResourceCompile Include="$(ProjectDir)espeak_sapi.rc" />

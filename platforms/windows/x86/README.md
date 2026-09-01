@@ -20,5 +20,9 @@ Requirements:
 - Inno Setup 6 (`winget install JRSoftware.InnoSetup`) for the installer only.
 
 Use `-SkipInstaller` when only the binaries are needed. The build uses the
-static MSVC runtime, so the resulting programs do not require a separate
+same script to publish the self-contained x86 Vario voice manager. The regular
+installer places Vario beside eSpeak and adds it to the eSpeak Start menu
+group. Vario manages this edition's 32-bit SAPI registry view and its optional
+Sonic speed boost.
+The native projects use the static MSVC runtime, so the resulting programs do not require a separate
 Visual C++ Redistributable installation.

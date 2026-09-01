@@ -1,5 +1,7 @@
 # Local build output and IDE state
 build/
+/platforms/windows/Vario/bin/
+/platforms/windows/Vario/obj/
 .vs/
 *.user
 *.suo

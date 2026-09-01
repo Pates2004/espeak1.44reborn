@@ -10,6 +10,7 @@ $x86ProjectDir = Join-Path $projectRoot 'platforms\windows\x86'
 $releaseDir = Join-Path $projectRoot 'build\x86\Release'
 $stageDir = Join-Path $projectRoot 'build\x86\package'
 $installerDir = Join-Path $projectRoot 'build\x86\installer'
+$varioPublishDir = Join-Path $projectRoot 'build\x86\vario\win-x86'
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswhere)) {
@@ -47,6 +48,12 @@ foreach ($project in $projects) {
     }
 }
 
+& dotnet publish (Join-Path $projectRoot 'platforms\windows\Vario\Vario.csproj') `
+    -c Release -r win-x86 --self-contained true -o $varioPublishDir
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $varioPublishDir 'Vario.exe'))) {
+    throw 'The Vario x86 build failed.'
+}
+
 $espeakExe = Join-Path $releaseDir 'espeak.exe'
 & $espeakExe --path=$projectRoot --compile=pl
 if ($LASTEXITCODE -ne 0) {
@@ -81,11 +88,13 @@ if (Test-Path -LiteralPath $resolvedStage) {
     Remove-Item -LiteralPath $resolvedStage -Recurse -Force
 }
 
-New-Item -ItemType Directory -Path $resolvedStage,(Join-Path $resolvedStage 'command_line') | Out-Null
+New-Item -ItemType Directory -Path $resolvedStage,(Join-Path $resolvedStage 'command_line'),(Join-Path $resolvedStage 'licenses') | Out-Null
 Copy-Item -LiteralPath (Join-Path $projectRoot 'espeak-data') -Destination $resolvedStage -Recurse
 Copy-Item -LiteralPath (Join-Path $projectRoot 'dictsource') -Destination $resolvedStage -Recurse
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $resolvedStage -Recurse
 Copy-Item -LiteralPath (Join-Path $releaseDir 'espeak_sapi.dll'),(Join-Path $releaseDir 'TTSApp.exe') -Destination $resolvedStage
+Copy-Item -LiteralPath (Join-Path $varioPublishDir 'Vario.exe') -Destination $resolvedStage
+Copy-Item -LiteralPath (Join-Path $projectRoot 'platforms\windows\third_party\sonic\LICENSE') -Destination (Join-Path $resolvedStage 'licenses\Sonic-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $releaseDir 'espeak.exe'),(Join-Path $releaseDir 'espeak_lib.dll'),(Join-Path $projectRoot 'src\speak_lib.h') -Destination (Join-Path $resolvedStage 'command_line')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'platforms\windows\Readme.txt') -Destination (Join-Path $resolvedStage 'Readme.txt')
 Copy-Item -LiteralPath (Join-Path $projectRoot 'License.txt') -Destination $resolvedStage
@@ -110,5 +119,5 @@ if (-not $SkipInstaller) {
 Write-Host "Binaries: $releaseDir"
 Write-Host "Package:  $resolvedStage"
 if (-not $SkipInstaller) {
-    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r21.exe')"
+    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r22.exe')"
 }

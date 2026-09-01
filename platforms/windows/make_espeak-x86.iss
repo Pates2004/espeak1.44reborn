@@ -4,7 +4,7 @@
 AppName=eSpeak
 AppId={{B0E0EE35-0C47-4C1A-A37D-82D12B0A6C32}
 AppVersion=1.44.05
-AppVerName=eSpeak version 1.44.05 r21 (32-bit)
+AppVerName=eSpeak version 1.44.05 r22 (32-bit)
 AppCopyright=Licensed under GNU General Public License version 3.   (See file License.txt for details).
 WizardStyle=modern
 PrivilegesRequired=admin
@@ -13,14 +13,14 @@ ArchitecturesAllowed=x86compatible
 DefaultDirName={autopf}\eSpeak
 DefaultGroupName=eSpeak
 OutputDir=..\..\build\x86\installer
-OutputBaseFilename=setup_espeak-1.44.05-x86-r21
+OutputBaseFilename=setup_espeak-1.44.05-x86-r22
 Compression=lzma2/ultra64
 SolidCompression=yes
 ShowLanguageDialog=auto
 UninstallDisplayIcon={app}\TTSApp.exe
-VersionInfoVersion=1.44.5.0
+VersionInfoVersion=1.44.5.22
 VersionInfoProductName=eSpeak
-VersionInfoDescription=eSpeak 1.44.05 r21 native 32-bit installer
+VersionInfoDescription=eSpeak 1.44.05 r22 native 32-bit installer
 
 [InstallDelete]
 Type: files; Name: "{app}\espeak.dll"
@@ -33,17 +33,20 @@ Name: "{app}\espeak-data\mbrola"
 [Files]
 Source: "..\..\build\x86\package\espeak_sapi.dll"; DestDir: "{app}"; Flags: regserver ignoreversion
 Source: "..\..\build\x86\package\TTSApp.exe"; DestDir:"{app}"; Flags: ignoreversion
+Source: "..\..\build\x86\package\Vario.exe"; DestDir:"{app}"; Flags: ignoreversion
 Source: "..\..\build\x86\package\espeak-data\*"; DestDir: "{app}\espeak-data"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\..\build\x86\package\dictsource\*"; DestDir: "{app}\dictsource"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\..\build\x86\package\docs\*"; DestDir: "{app}\docs"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\..\build\x86\package\command_line\*"; DestDir: "{app}\command_line"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\..\build\x86\package\Readme.txt"; DestDir: "{app}"; Flags: isreadme ignoreversion
 Source: "..\..\build\x86\package\License.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\build\x86\package\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\eSpeak SAPI test"; Filename: "{app}\TTSApp.exe"; WorkingDir: "{app}"
-Name: "{group}\eSpeak documentation"; Filename: "{app}\docs\index.html"
-Name: "{group}\Uninstall eSpeak"; Filename: "{uninstallexe}"
+Name: "{group}\eSpeak SAPI test (32-bit)"; Filename: "{app}\TTSApp.exe"; WorkingDir: "{app}"
+Name: "{group}\Vario - eSpeak voice manager (32-bit)"; Filename: "{app}\Vario.exe"; WorkingDir: "{app}"
+Name: "{group}\eSpeak documentation (32-bit)"; Filename: "{app}\docs\index.html"
+Name: "{group}\Uninstall eSpeak (32-bit)"; Filename: "{uninstallexe}"
 
 [Registry]
 Root: HKLM32; Subkey: "Software\Microsoft\Speech\PhoneConverters\Tokens\eSpeak"; Flags: deletekey uninsdeletekey
