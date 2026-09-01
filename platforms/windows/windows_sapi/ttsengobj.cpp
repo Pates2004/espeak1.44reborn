@@ -161,6 +161,19 @@ float GetSonicSpeed()
 	return 1.0f + ((float)positive_rate * 0.2f);
 }
 
+int GetSonicRate(float speed)
+{
+	if(speed <= 1.0f)
+		return 0;
+	static const int rate_table[21] = {80,110,124,133,142,151,159,168,174,180,187,
+		196,208,220,240,270,300,335,369,390,450};
+	int rate = master_rate;
+	if(rate < -10) rate = -10;
+	if(rate > 10) rate = 10;
+	const int desired_rate = (int)(((float)rate_table[rate+10] * speed) + 0.5f);
+	return (desired_rate > espeakRATE_MAXIMUM) ? desired_rate : 0;
+}
+
 int DrainSonicOutput()
 {
 	short output[4096];
@@ -1021,6 +1034,9 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 	if(FAILED(result))
 		return result;
 	sonic_speed = GetSonicSpeed();
+	const int sonic_rate = GetSonicRate(sonic_speed);
+	if(sonic_rate > espeakRATE_MAXIMUM)
+		sonic_speed = (float)sonic_rate / (float)espeakRATE_NORMAL;
 
 	const int saved_volume = gVolume;
 	const int saved_speed = gSpeed;
@@ -1086,8 +1102,10 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 			sonicSetSpeed(sonic_stream,sonic_speed);
 		}
 
+		espeak_SetSonicRate(sonic_rate);
 		const espeak_ERROR synth_result = espeak_Synth(TextBuf,0,0,POS_CHARACTER,0,
 			espeakCHARS_WCHAR | espeakKEEP_NAMEDATA | espeakPHONEMES,NULL,NULL);
+		espeak_SetSonicRate(0);
 		int sonic_result = 0;
 		if(sonic_stream != NULL)
 		{
