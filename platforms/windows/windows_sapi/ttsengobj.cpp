@@ -40,6 +40,7 @@ extern void InitNamedata(void);
 
 int master_volume = 100;
 int master_rate = 0;
+int master_range = 50;
 
 int initialised = 0;
 int gVolume = 100;
@@ -490,7 +491,10 @@ static int ConvertRange(int range)
 	static int range_table[21] = {16,28,39,49,58,66,74,81,88,94,100,105,110,115,120,125,130,135,140,145,150};
 	if(range < -10) range = -10;
 	if(range > 10) range = 10;
-	return(range_table[range+10]/2);
+	int converted = master_range + (range_table[range+10]/2) - 50;
+	if(converted < 0) converted = 0;
+	if(converted > 100) converted = 100;
+	return converted;
 }
 
 CTTSEngObj::CTTSEngObj()
@@ -499,7 +503,8 @@ CTTSEngObj::CTTSEngObj()
       m_pCurrFrag(nullptr),
       m_pNextChar(nullptr),
       m_pEndChar(nullptr),
-      m_ullAudioOff(0)
+      m_ullAudioOff(0),
+      voice_range(50)
 {
     voice_name[0] = 0;
     InterlockedIncrement(&g_module_object_count);
@@ -615,6 +620,9 @@ STDMETHODIMP CTTSEngObj::SetObjectToken(ISpObjectToken * pToken)
 	char* new_path = NULL;
 	wchar_t *voicename = NULL;
 	wchar_t *path = NULL;
+	DWORD new_master_range = 50;
+	if(SUCCEEDED(pToken->GetDWORD(L"Inflection",&new_master_range)) && (new_master_range > 100))
+		new_master_range = 100;
 
 	HRESULT value_result = pToken->GetStringValue(L"VoiceName",&voicename);
 	if(SUCCEEDED(value_result))
@@ -684,6 +692,8 @@ STDMETHODIMP CTTSEngObj::SetObjectToken(ISpObjectToken * pToken)
 
 	master_volume = 100;
 	master_rate = 0;
+	voice_range = (int)new_master_range;
+	master_range = voice_range;
 	gVolume = 100;
 	gSpeed = -1;
 	gPitch = -1;
@@ -1020,6 +1030,7 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 			return E_INVALIDARG;
 		strcpy_s(g_voice_name,sizeof(g_voice_name),voice_name);
 	}
+	master_range = voice_range;
 
 	InitNamedata();
 	m_pCurrFrag = pTextFragList;
@@ -1091,18 +1102,22 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 	if(text_characters > 0)
 	{
 		SynthesisContext context(this,pOutputSite);
+		const int adjusted_sonic_rate = espeak_SetSonicRate(sonic_rate);
+		sonic_speed = (adjusted_sonic_rate > espeakRATE_MAXIMUM)
+			? (float)adjusted_sonic_rate / (float)espeakRATE_NORMAL
+			: 1.0f;
 		if(sonic_speed > 1.0f)
 		{
 			sonic_stream = sonicCreateStream(srate*50,1);
 			if(sonic_stream == NULL)
 			{
+				espeak_SetSonicRate(0);
 				sonic_speed = 1.0f;
 				return E_OUTOFMEMORY;
 			}
 			sonicSetSpeed(sonic_stream,sonic_speed);
 		}
 
-		espeak_SetSonicRate(sonic_rate);
 		const espeak_ERROR synth_result = espeak_Synth(TextBuf,0,0,POS_CHARACTER,0,
 			espeakCHARS_WCHAR | espeakKEEP_NAMEDATA | espeakPHONEMES,NULL,NULL);
 		espeak_SetSonicRate(0);

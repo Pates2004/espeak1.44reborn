@@ -62,6 +62,7 @@ private:
     const WCHAR* m_pEndChar;
     ULONGLONG m_ullAudioOff;
     char voice_name[80];
+    int voice_range;
 };
 
 #endif

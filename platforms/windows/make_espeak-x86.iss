@@ -4,27 +4,30 @@
 AppName=eSpeak
 AppId={{B0E0EE35-0C47-4C1A-A37D-82D12B0A6C32}
 AppVersion=1.44.05
-AppVerName=eSpeak version 1.44.05 r23 (32-bit)
+AppVerName=eSpeak version 1.44.05 r24 (32-bit)
 AppCopyright=Licensed under GNU General Public License version 3.   (See file License.txt for details).
 WizardStyle=modern
+LicenseFile=..\..\License.txt
 PrivilegesRequired=admin
 ArchitecturesAllowed=x86compatible
 
 DefaultDirName={autopf}\eSpeak
 DefaultGroupName=eSpeak
 OutputDir=..\..\build\x86\installer
-OutputBaseFilename=setup_espeak-1.44.05-x86-r23
+OutputBaseFilename=setup_espeak-1.44.05-x86-r24
 Compression=lzma2/ultra64
 SolidCompression=yes
 ShowLanguageDialog=auto
 UninstallDisplayIcon={app}\TTSApp.exe
-VersionInfoVersion=1.44.5.23
+VersionInfoVersion=1.44.5.24
 VersionInfoProductName=eSpeak
-VersionInfoDescription=eSpeak 1.44.05 r23 native 32-bit installer
+VersionInfoDescription=eSpeak 1.44.05 r24 native 32-bit installer
 
 [InstallDelete]
 Type: files; Name: "{app}\espeak.dll"
 Type: filesandordirs; Name: "{app}\espeak-data\voices\test"
+Type: files; Name: "{app}\Vario.exe"; Check: ShouldRemoveVario
+Type: files; Name: "{group}\Vario - eSpeak voice manager (32-bit).lnk"; Check: ShouldRemoveVario
 
 [Dirs]
 Name: "{app}\espeak-data\soundicons"
@@ -33,7 +36,7 @@ Name: "{app}\espeak-data\mbrola"
 [Files]
 Source: "..\..\build\x86\package\espeak_sapi.dll"; DestDir: "{app}"; Flags: regserver ignoreversion
 Source: "..\..\build\x86\package\TTSApp.exe"; DestDir:"{app}"; Flags: ignoreversion
-Source: "..\..\build\x86\package\Vario.exe"; DestDir:"{app}"; Flags: ignoreversion
+Source: "..\..\build\x86\package\Vario.exe"; DestDir:"{app}"; Flags: ignoreversion; Check: ShouldInstallVario
 Source: "..\..\build\x86\package\espeak-data\*"; DestDir: "{app}\espeak-data"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\..\build\x86\package\dictsource\*"; DestDir: "{app}\dictsource"; Flags: recursesubdirs createallsubdirs ignoreversion
 Source: "..\..\build\x86\package\docs\*"; DestDir: "{app}\docs"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -44,7 +47,7 @@ Source: "..\..\build\x86\package\licenses\*"; DestDir: "{app}\licenses"; Flags: 
 
 [Icons]
 Name: "{group}\eSpeak SAPI test (32-bit)"; Filename: "{app}\TTSApp.exe"; WorkingDir: "{app}"
-Name: "{group}\Vario - eSpeak voice manager (32-bit)"; Filename: "{app}\Vario.exe"; WorkingDir: "{app}"
+Name: "{group}\Vario - eSpeak voice manager (32-bit)"; Filename: "{app}\Vario.exe"; WorkingDir: "{app}"; Check: ShouldInstallVario
 Name: "{group}\eSpeak documentation (32-bit)"; Filename: "{app}\docs\index.html"
 Name: "{group}\Uninstall eSpeak (32-bit)"; Filename: "{uninstallexe}"
 
@@ -73,10 +76,18 @@ Name: "tr"; MessagesFile: "compiler:Languages\Turkish.isl"
 v1=Select which voices to install
 v2=or press Enter to accept defaults
 v3=Enter voice names, eg: (for Portuguese)   pt,  or with a variant, eg: pt+f3
+VarioPageTitle=Optional companion application
+VarioPageDescription=Choose whether to install Vario before accepting the license.
+VarioPageSubcaption=Vario is an accessible manager for installed SAPI voices, variants, per-voice modulation and Sonic speed boost.
+InstallVario=Install Vario (recommended)
 
 pl.v1=Wybierz głosy, które mają zostać zainstalowane
 pl.v2=lub naciśnij Enter, aby przyjąć wartości domyślne
 pl.v3=Wpisz nazwy głosów, np. pl albo wariant pl+f3
+pl.VarioPageTitle=Opcjonalna aplikacja dodatkowa
+pl.VarioPageDescription=Wybierz, czy zainstalować Vario przed zaakceptowaniem licencji.
+pl.VarioPageSubcaption=Vario to dostępny menedżer zainstalowanych głosów SAPI, wariantów, modulacji dla poszczególnych głosów i przyspieszania Sonic.
+pl.InstallVario=Zainstaluj Vario (zalecane)
 
 fr.v1=Sélectionnez les voix à installer
 fr.v2=ou appuyez sur Entrée pour accepter les valeurs par défaut.
@@ -91,6 +102,7 @@ var
   UILanguage: Integer;
   UIVoice: String;
   Page: TInputQueryWizardPage;
+  VarioPage: TInputOptionWizardPage;
   voices_installed: array [0..200] of String;
   n_voices_installed: Integer;
 
@@ -370,6 +382,7 @@ begin
   RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'CLSID','{BE985C8D-BE32-4A22-AA93-55C16A6D1D91}');
   RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'Path',ExpandConstant('{app}'));
   RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'VoiceName',Voice);
+  RegWriteDWordValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'Inflection',50);
 
   RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Name',sEspeak+Voice);
   RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Gender','Male');
@@ -378,6 +391,18 @@ begin
   RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Vendor','http://espeak.sf.net');
   
   SetPhoneConvertor(Lcode);
+end;
+
+
+function ShouldInstallVario: Boolean;
+begin
+  Result := VarioPage.Values[0];
+end;
+
+
+function ShouldRemoveVario: Boolean;
+begin
+  Result := not ShouldInstallVario;
 end;
 
 
@@ -428,6 +453,12 @@ var
   uilang: String;
 begin
   // Create the language selection page
+
+  VarioPage := CreateInputOptionPage(wpWelcome,
+    CustomMessage('VarioPageTitle'), CustomMessage('VarioPageDescription'),
+    CustomMessage('VarioPageSubcaption'), False, False);
+  VarioPage.Add(CustomMessage('InstallVario'));
+  VarioPage.Values[0] := True;
 
   UILanguage := GetUILanguage;
   UIVoice := VoiceFromLanguage(UILanguage);

@@ -4,6 +4,8 @@ using System.Text.RegularExpressions;
 
 namespace Vario;
 
+internal sealed record VoiceConfiguration(string Name, int Inflection);
+
 internal sealed class RegistryService : IDisposable
 {
     private const string VoicesKey = @"SOFTWARE\Microsoft\Speech\Voices\Tokens";
@@ -22,21 +24,25 @@ internal sealed class RegistryService : IDisposable
 
     internal string ArchitectureName => Environment.Is64BitProcess ? "64-bit" : "32-bit";
 
-    internal IReadOnlyList<string> ReadInstalledVoices()
+    internal IReadOnlyList<VoiceConfiguration> ReadInstalledVoices()
     {
         using RegistryKey? tokens = machine.OpenSubKey(VoicesKey, writable: false);
         if (tokens is null)
-            return Array.Empty<string>();
+            return Array.Empty<VoiceConfiguration>();
 
         return GetManagedTokenNames(tokens)
             .Select(name =>
             {
                 using RegistryKey? token = tokens.OpenSubKey(name, writable: false);
-                return token?.GetValue("VoiceName") as string;
+                string? voiceName = token?.GetValue("VoiceName") as string;
+                int inflection = token?.GetValue("Inflection") is int stored ? Math.Clamp(stored, 0, 100) : 50;
+                return string.IsNullOrWhiteSpace(voiceName)
+                    ? null
+                    : new VoiceConfiguration(voiceName, inflection);
             })
-            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Where(value => value is not null)
             .Select(value => value!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .DistinctBy(value => value.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
@@ -74,17 +80,17 @@ internal sealed class RegistryService : IDisposable
         return settings?.GetValue("SonicBoost") is int value && value != 0;
     }
 
-    internal void Apply(IReadOnlyList<string> requestedVoices, bool sonicBoost)
+    internal void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices, bool sonicBoost)
     {
-        string[] voices = requestedVoices
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        VoiceConfiguration[] voices = requestedVoices
+            .Where(value => !string.IsNullOrWhiteSpace(value.Name))
+            .Select(value => new VoiceConfiguration(value.Name.Trim(), value.Inflection))
+            .DistinctBy(value => value.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        if (voices.Length == 0)
-            throw new InvalidOperationException("At least one SAPI voice is required.");
         if (voices.Length > 200)
             throw new InvalidOperationException("No more than 200 SAPI voices can be registered.");
+        if (voices.Any(value => value.Inflection is < 0 or > 100))
+            throw new InvalidOperationException("Voice modulation must be between 0 and 100.");
 
         using RegistryKey tokens = machine.CreateSubKey(VoicesKey, writable: true)
             ?? throw new InvalidOperationException("The SAPI voice registry could not be opened.");
@@ -96,7 +102,7 @@ internal sealed class RegistryService : IDisposable
             string keyName = index == 0 ? "eSpeak" : $"eSpeak_{index}";
             desiredNames.Add(keyName);
             WriteVoiceToken(tokens, keyName, voices[index]);
-            EnsurePhoneConverter(LanguageFromVoice(voices[index]));
+            EnsurePhoneConverter(LanguageFromVoice(voices[index].Name));
         }
 
         foreach (string obsolete in previousNames.Where(name => !desiredNames.Contains(name)))
@@ -118,8 +124,9 @@ internal sealed class RegistryService : IDisposable
         return separator < 0 || !int.TryParse(name[(separator + 1)..], out int index) ? 0 : index;
     }
 
-    private static void WriteVoiceToken(RegistryKey tokens, string keyName, string voice)
+    private static void WriteVoiceToken(RegistryKey tokens, string keyName, VoiceConfiguration configuration)
     {
+        string voice = configuration.Name;
         using RegistryKey token = tokens.CreateSubKey(keyName, writable: true)
             ?? throw new InvalidOperationException($"Cannot create SAPI token {keyName}.");
         string displayVoice = voice.Equals("default", StringComparison.OrdinalIgnoreCase)
@@ -128,6 +135,7 @@ internal sealed class RegistryService : IDisposable
         token.SetValue("CLSID", EngineClsid, RegistryValueKind.String);
         token.SetValue("Path", AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar), RegistryValueKind.String);
         token.SetValue("VoiceName", voice, RegistryValueKind.String);
+        token.SetValue("Inflection", configuration.Inflection, RegistryValueKind.DWord);
 
         using RegistryKey attributes = token.CreateSubKey("Attributes", writable: true)
             ?? throw new InvalidOperationException($"Cannot create attributes for {keyName}.");
