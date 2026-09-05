@@ -12,7 +12,6 @@ internal enum TreeNodeCheckState
 internal sealed class TriStateTreeView : TreeView
 {
     private const int WmLeftButtonDown = 0x0201;
-    private const int WmKeyDown = 0x0100;
     private const int TvFirst = 0x1100;
     private const int TvmSetItemW = TvFirst + 63;
     private const int TvmSetExtendedStyle = TvFirst + 44;
@@ -21,6 +20,14 @@ internal sealed class TriStateTreeView : TreeView
     private const uint TvisStateImageMask = 0xF000;
 
     internal event EventHandler<TreeViewEventArgs>? CheckStateChanged;
+
+    internal TriStateTreeView()
+    {
+        // Let WinForms expose the native state images through the standard
+        // UI Automation Toggle pattern. Without this style NVDA receives a
+        // bare node-name event followed by a separate legacy state event.
+        CheckBoxes = true;
+    }
 
     protected override void OnHandleCreated(EventArgs e)
     {
@@ -45,26 +52,6 @@ internal sealed class TriStateTreeView : TreeView
 
     protected override void WndProc(ref Message message)
     {
-        if (message.Msg == WmKeyDown && SelectedNode?.Parent is null)
-        {
-            Keys key = (Keys)message.WParam.ToInt32() & Keys.KeyCode;
-            TreeNode? target = key switch
-            {
-                Keys.Down => SelectedNode.NextNode,
-                Keys.Up => SelectedNode.PrevNode,
-                _ => null
-            };
-            if (key is Keys.Down or Keys.Up)
-            {
-                if (target is not null)
-                {
-                    SelectedNode = target;
-                    target.EnsureVisible();
-                }
-                return;
-            }
-        }
-
         if (message.Msg == WmLeftButtonDown)
         {
             long coordinates = message.LParam.ToInt64();
@@ -93,6 +80,9 @@ internal sealed class TriStateTreeView : TreeView
 
     internal void SetCheckState(TreeNode node, TreeNodeCheckState state)
     {
+        bool isChecked = state == TreeNodeCheckState.Checked;
+        if (node.Checked != isChecked)
+            node.Checked = isChecked;
         node.StateImageIndex = (int)state - 1;
         if (IsHandleCreated && node.TreeView == this && node.Handle != nint.Zero)
             ApplyNativeState(node, state);
