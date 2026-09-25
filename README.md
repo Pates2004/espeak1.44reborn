@@ -1,13 +1,13 @@
-# eSpeak 1.44.05 Reborn — r27 (32-bit)
+# eSpeak 1.44.05 Reborn — r28 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r27 project:
+eSpeak r28 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r27` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r28` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
 
@@ -18,6 +18,10 @@ so the complete collection loads without parser errors on this engine.
 Release r27 restores native Up/Down navigation in Vario and exposes every
 language node as one standard checkable tree item, including its selection and
 expanded/collapsed state, for NVDA and other UI Automation clients.
+
+Release r28 corrects the Polish `ci` pronunciation in words such as
+*druciana*, *bociana*, *starcia* and *tarcia*. The dictionary is identical to
+the x64 edition and includes a focused regression check.
 
 ## Building on Windows
 
@@ -32,7 +36,7 @@ powershell -ExecutionPolicy Bypass -File platforms\windows\build-x86.ps1
 
 The script builds the command-line synthesizer, library, 32-bit SAPI engine
 and test application, compiles the Polish dictionary, stages the package and
-creates `build\x86\installer\setup_espeak-1.44.05-x86-r27.exe`.
+creates `build\x86\installer\setup_espeak-1.44.05-x86-r28.exe`.
 
 Use `-SkipInstaller` when only the binaries are needed.  `-SkipTests` skips
 the optional project smoke checks while retaining the normal compilation and

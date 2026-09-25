@@ -65,6 +65,7 @@ if (-not $SkipTests) {
     & (Join-Path $PSScriptRoot 'test-long-input.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
     & (Join-Path $PSScriptRoot 'test-polish-fallback.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
     & (Join-Path $PSScriptRoot 'test-polish-georgian.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
+    & (Join-Path $PSScriptRoot 'test-polish-ci.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
 
     $wavPath = Join-Path $releaseDir 'smoke-pl.wav'
     & $espeakExe --path=$projectRoot -v pl -w $wavPath '32-bit synthesis test.'
@@ -119,5 +120,5 @@ if (-not $SkipInstaller) {
 Write-Host "Binaries: $releaseDir"
 Write-Host "Package:  $resolvedStage"
 if (-not $SkipInstaller) {
-    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r27.exe')"
+    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r28.exe')"
 }

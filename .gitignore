@@ -1,5 +1,7 @@
 # Local build output and IDE state
 build/
+/installfiles/
+/trash/
 /platforms/windows/Vario/bin/
 /platforms/windows/Vario/obj/
 .vs/
