@@ -27,6 +27,8 @@ internal sealed class MainForm : Form
     };
     private readonly Label inflectionVoiceLabel = new() { AutoSize = true };
     private readonly CheckBox sonicCheck = new() { AutoSize = true };
+    private readonly RadioButton sonicModeNvda = new() { AutoSize = true };
+    private readonly RadioButton sonicModeLegacy = new() { AutoSize = true };
     private readonly AnnouncingLabel statusLabel = new() { AutoSize = false, AutoEllipsis = true };
 
     private IReadOnlyList<string> catalogVoices = Array.Empty<string>();
@@ -35,6 +37,7 @@ internal sealed class MainForm : Form
     private readonly Dictionary<string, int> pendingInflections = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, int> baselineInflections = new(StringComparer.OrdinalIgnoreCase);
     private bool baselineSonic;
+    private SonicMode baselineSonicMode;
     private bool loading;
     private bool updatingInflection;
     private bool dirty;
@@ -44,8 +47,8 @@ internal sealed class MainForm : Form
     {
         Text = UiText.Title;
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(840, 600);
-        ClientSize = new Size(960, 680);
+        MinimumSize = new Size(840, 680);
+        ClientSize = new Size(960, 740);
         AutoScaleMode = AutoScaleMode.Dpi;
         Font = new Font("Segoe UI", 9F);
         BuildInterface();
@@ -61,10 +64,11 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             Padding = new Padding(12),
             ColumnCount = 1,
-            RowCount = 6
+            RowCount = 7
         };
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -192,9 +196,37 @@ internal sealed class MainForm : Form
 
         sonicCheck.Text = UiText.Sonic;
         sonicCheck.TabIndex = 5;
-        sonicCheck.Margin = new Padding(0, 10, 0, 8);
+        sonicCheck.Margin = new Padding(0, 10, 0, 0);
         sonicCheck.CheckedChanged += (_, _) => { if (!loading) UpdateDirty(); };
         root.Controls.Add(sonicCheck, 0, 3);
+
+        GroupBox sonicModeGroup = new()
+        {
+            Text = UiText.SonicModeGroup,
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            Padding = new Padding(10),
+            Margin = new Padding(0, 4, 0, 8),
+            TabStop = false
+        };
+        FlowLayoutPanel sonicModes = new()
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false
+        };
+        sonicModeNvda.Text = UiText.SonicModeNvda;
+        sonicModeNvda.TabIndex = 6;
+        sonicModeNvda.Checked = true;
+        sonicModeNvda.CheckedChanged += (_, _) => { if (!loading) UpdateDirty(); };
+        sonicModeLegacy.Text = UiText.SonicModeLegacy;
+        sonicModeLegacy.TabIndex = 7;
+        sonicModeLegacy.CheckedChanged += (_, _) => { if (!loading) UpdateDirty(); };
+        sonicModes.Controls.Add(sonicModeNvda);
+        sonicModes.Controls.Add(sonicModeLegacy);
+        sonicModeGroup.Controls.Add(sonicModes);
+        root.Controls.Add(sonicModeGroup, 0, 4);
 
         FlowLayoutPanel buttons = new()
         {
@@ -203,23 +235,23 @@ internal sealed class MainForm : Form
             AutoSize = true,
             WrapContents = false
         };
-        Button closeButton = new() { Text = UiText.Close, AutoSize = true, TabIndex = 8 };
-        Button reloadButton = new() { Text = UiText.Reload, AutoSize = true, TabIndex = 7 };
-        Button applyButton = new() { Text = UiText.Apply, AutoSize = true, TabIndex = 6 };
+        Button closeButton = new() { Text = UiText.Close, AutoSize = true, TabIndex = 10 };
+        Button reloadButton = new() { Text = UiText.Reload, AutoSize = true, TabIndex = 9 };
+        Button applyButton = new() { Text = UiText.Apply, AutoSize = true, TabIndex = 8 };
         closeButton.Click += (_, _) => { allowClose = !dirty || Confirm(UiText.ConfirmClose); if (allowClose) Close(); };
         reloadButton.Click += (_, _) => { if (!dirty || Confirm(UiText.ConfirmReload)) LoadData(); };
         applyButton.Click += (_, _) => ApplyChanges();
         buttons.Controls.Add(closeButton);
         buttons.Controls.Add(reloadButton);
         buttons.Controls.Add(applyButton);
-        root.Controls.Add(buttons, 0, 4);
+        root.Controls.Add(buttons, 0, 5);
 
         statusLabel.Text = UiText.Ready;
         statusLabel.Height = 34;
         statusLabel.Dock = DockStyle.Fill;
         statusLabel.AccessibleRole = AccessibleRole.StaticText;
-        statusLabel.TabIndex = 9;
-        root.Controls.Add(statusLabel, 0, 5);
+        statusLabel.TabIndex = 11;
+        root.Controls.Add(statusLabel, 0, 6);
 
         AcceptButton = applyButton;
         CancelButton = closeButton;
@@ -247,7 +279,10 @@ internal sealed class MainForm : Form
 
             baselineInflections = new Dictionary<string, int>(pendingInflections, StringComparer.OrdinalIgnoreCase);
             baselineSonic = registry.ReadSonicBoost();
+            baselineSonicMode = registry.ReadSonicMode();
             sonicCheck.Checked = baselineSonic;
+            sonicModeNvda.Checked = baselineSonicMode == SonicMode.Nvda;
+            sonicModeLegacy.Checked = baselineSonicMode == SonicMode.Legacy;
             RebuildTrees();
             dirty = false;
             SetStatus(UiText.Ready);
@@ -469,9 +504,10 @@ internal sealed class MainForm : Form
                 .Where(pendingInflections.ContainsKey)
                 .Select(name => new VoiceConfiguration(name, pendingInflections[name]))
                 .ToArray();
-            registry.Apply(voices, sonicCheck.Checked);
+            registry.Apply(voices, sonicCheck.Checked, sonicModeNvda.Checked ? SonicMode.Nvda : SonicMode.Legacy);
             baselineInflections = new Dictionary<string, int>(pendingInflections, StringComparer.OrdinalIgnoreCase);
             baselineSonic = sonicCheck.Checked;
+            baselineSonicMode = sonicModeNvda.Checked ? SonicMode.Nvda : SonicMode.Legacy;
             dirty = false;
             SetStatus(UiText.Saved(voices.Length));
         }
@@ -569,6 +605,7 @@ internal sealed class MainForm : Form
     private void UpdateDirty()
     {
         dirty = sonicCheck.Checked != baselineSonic ||
+            (sonicModeNvda.Checked ? SonicMode.Nvda : SonicMode.Legacy) != baselineSonicMode ||
             pendingInflections.Count != baselineInflections.Count ||
             pendingInflections.Any(pair => !baselineInflections.TryGetValue(pair.Key, out int value) || value != pair.Value);
     }

@@ -5,6 +5,11 @@ the eSpeak voice tokens in the registry view matching the installed SAPI
 edition, lets the user combine languages with variants, and controls the
 optional Sonic speed boost. Registry changes require administrator rights.
 
+The boost checkbox is separate from a radio-button choice of speed modes.
+NVDA-style boost (selected by default) triples the SAPI slider's entire
+underlying speed range; the original mode boosts only upper positive rates.
+The choice is saved for the corresponding 32-bit or 64-bit SAPI registry view.
+
 Available and installed voices are presented as checkable trees. Checking a
 language selects all of its voices, while expanding it permits individual
 selection. Delete removes the focused installed voice after confirmation;

@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 namespace Vario;
 
 internal sealed record VoiceConfiguration(string Name, int Inflection);
+internal enum SonicMode { Legacy = 0, Nvda = 1 }
 
 internal sealed class RegistryService : IDisposable
 {
@@ -80,8 +81,17 @@ internal sealed class RegistryService : IDisposable
         return settings?.GetValue("SonicBoost") is int value && value != 0;
     }
 
-    internal void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices, bool sonicBoost)
+    internal SonicMode ReadSonicMode()
     {
+        using RegistryKey? settings = machine.OpenSubKey(SettingsKey, writable: false);
+        return settings?.GetValue("SonicMode") is int value && value == (int)SonicMode.Legacy
+            ? SonicMode.Legacy : SonicMode.Nvda;
+    }
+
+    internal void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices, bool sonicBoost, SonicMode sonicMode)
+    {
+        if (sonicMode is not (SonicMode.Legacy or SonicMode.Nvda))
+            throw new ArgumentOutOfRangeException(nameof(sonicMode));
         VoiceConfiguration[] voices = requestedVoices
             .Where(value => !string.IsNullOrWhiteSpace(value.Name))
             .Select(value => new VoiceConfiguration(value.Name.Trim(), value.Inflection))
@@ -111,6 +121,7 @@ internal sealed class RegistryService : IDisposable
         using RegistryKey settings = machine.CreateSubKey(SettingsKey, writable: true)
             ?? throw new InvalidOperationException("The Vario settings registry could not be opened.");
         settings.SetValue("SonicBoost", sonicBoost ? 1 : 0, RegistryValueKind.DWord);
+        settings.SetValue("SonicMode", (int)sonicMode, RegistryValueKind.DWord);
     }
 
     private static IEnumerable<string> GetManagedTokenNames(RegistryKey tokens) =>

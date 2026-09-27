@@ -41,8 +41,15 @@ internal static class UiText
         $"Set modulation for {voice} to {value}.",
         $"Ustawiono modulację głosu {voice} na {value}.");
     internal static string Sonic => Pick(
-        "Use Sonic for additional speed boost at positive SAPI rates (up to 3x)",
-        "Używaj Sonic do dodatkowego przyspieszania przy dodatniej prędkości SAPI (do 3×)");
+        "Enable additional speed boost (up to 3x)",
+        "Włącz dodatkowe przyspieszanie (do 3×)");
+    internal static string SonicModeGroup => Pick("Speed boost mode", "Tryb dodatkowego przyspieszania");
+    internal static string SonicModeNvda => Pick(
+        "NVDA-style: triple the speed across the entire range (default)",
+        "Jak w NVDA: trzykrotna prędkość na całej skali (domyślnie)");
+    internal static string SonicModeLegacy => Pick(
+        "Original: boost only at high positive SAPI rates",
+        "Dotychczasowy: przyspieszanie tylko przy wysokich dodatnich prędkościach SAPI");
     internal static string Apply => Pick("A&pply", "&Zastosuj");
     internal static string Reload => Pick("&Reload", "&Odśwież");
     internal static string Close => Pick("&Close", "Za&mknij");

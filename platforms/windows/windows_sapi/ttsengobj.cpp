@@ -22,6 +22,7 @@
 #include "../../../src/speak_lib.h"
 #include "../third_party/sonic/sonic.h"
 #include <limits.h>
+#include "sonic_speed.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,6 +79,9 @@ sonicStream sonic_stream = NULL;
 float sonic_speed = 1.0f;
 
 namespace {
+
+bool sonic_boost_enabled = false;
+SonicSpeed::Mode sonic_mode = SonicSpeed::Mode::Nvda;
 
 class SapiEngineGuard final
 {
@@ -154,25 +158,19 @@ bool IsSonicBoostEnabled()
 	return (result == ERROR_SUCCESS) && (type == REG_DWORD) && (value != 0);
 }
 
-float GetSonicSpeed()
+SonicSpeed::Mode ReadSonicMode()
 {
-	if(!IsSonicBoostEnabled() || (master_rate <= 0))
-		return 1.0f;
-	const int positive_rate = (master_rate > 10) ? 10 : master_rate;
-	return 1.0f + ((float)positive_rate * 0.2f);
-}
-
-int GetSonicRate(float speed)
-{
-	if(speed <= 1.0f)
-		return 0;
-	static const int rate_table[21] = {80,110,124,133,142,151,159,168,174,180,187,
-		196,208,220,240,270,300,335,369,390,450};
-	int rate = master_rate;
-	if(rate < -10) rate = -10;
-	if(rate > 10) rate = 10;
-	const int desired_rate = (int)(((float)rate_table[rate+10] * speed) + 0.5f);
-	return (desired_rate > espeakRATE_MAXIMUM) ? desired_rate : 0;
+	HKEY key = NULL;
+	DWORD value = 1; // New installations default to the NVDA-style mode.
+	DWORD type = 0;
+	DWORD size = sizeof(value);
+	if(RegOpenKeyExW(HKEY_LOCAL_MACHINE,L"SOFTWARE\\eSpeak\\Vario",0,KEY_QUERY_VALUE,&key) != ERROR_SUCCESS)
+		return SonicSpeed::Mode::Nvda;
+	const LONG result = RegQueryValueExW(key,L"SonicMode",NULL,&type,
+		reinterpret_cast<BYTE*>(&value),&size);
+	RegCloseKey(key);
+	return (result == ERROR_SUCCESS && type == REG_DWORD && size == sizeof(value) && value == 0)
+		? SonicSpeed::Mode::Legacy : SonicSpeed::Mode::Nvda;
 }
 
 int DrainSonicOutput()
@@ -461,16 +459,7 @@ int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
 
 static int ConvertRate(int new_rate)
 {//=================================
-
-	int rate;
-
-	static int rate_table[21] = {80,110,124,133,142,151,159,168,174,180,187,
-				    196,208,220,240,270,300,335,369,390,450 };
-
-	rate = new_rate + master_rate;
-	if(rate < -10) rate = -10;
-	if(rate > 10) rate = 10;
-	return(rate_table[rate+10]);
+	return SonicSpeed::NativeRate(master_rate,new_rate,sonic_boost_enabled,sonic_mode);
 }  // end of ConvertRate
 
 
@@ -1044,8 +1033,10 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 	result = CheckActions(pOutputSite);
 	if(FAILED(result))
 		return result;
-	sonic_speed = GetSonicSpeed();
-	const int sonic_rate = GetSonicRate(sonic_speed);
+	sonic_boost_enabled = IsSonicBoostEnabled();
+	sonic_mode = ReadSonicMode();
+	const int sonic_rate = SonicSpeed::Target(master_rate,sonic_boost_enabled,sonic_mode);
+	sonic_speed = 1.0f;
 	if(sonic_rate > espeakRATE_MAXIMUM)
 		sonic_speed = (float)sonic_rate / (float)espeakRATE_NORMAL;
 

@@ -3,9 +3,27 @@
 #include <sapi.h>
 #include <sapiddk.h>
 #include <stdio.h>
+#include "../windows_sapi/sonic_speed.h"
+
+static bool VerifySonicModes()
+{
+    using SonicSpeed::Mode;
+    return SonicSpeed::Rate(-10) == 80 && SonicSpeed::Rate(0) == 187 &&
+        SonicSpeed::Rate(10) == 450 && SonicSpeed::Rate(10, 10) == 450 &&
+        SonicSpeed::NativeRate(-10, 0, true, Mode::Nvda) == 240 &&
+        SonicSpeed::Target(-10, true, Mode::Nvda) == 0 &&
+        SonicSpeed::NativeRate(0, 0, true, Mode::Nvda) == 450 &&
+        SonicSpeed::Target(0, true, Mode::Nvda) == 561 &&
+        SonicSpeed::Target(10, true, Mode::Nvda) == 1350 &&
+        SonicSpeed::NativeRate(0, 0, true, Mode::Legacy) == 187 &&
+        SonicSpeed::Target(4, true, Mode::Legacy) == 0 &&
+        SonicSpeed::Target(5, true, Mode::Legacy) == 540 &&
+        SonicSpeed::Target(10, false, Mode::Nvda) == 0;
+}
 
 int wmain(int argc, wchar_t** argv)
 {
+    if (!VerifySonicModes()) return 7;
     const wchar_t* path = argc > 1 ? argv[1] : L"espeak_sapi.dll";
     HMODULE module = LoadLibraryW(path);
     if (module == nullptr) {
