@@ -9,7 +9,7 @@ $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $x86ProjectDir = Join-Path $projectRoot 'platforms\windows\x86'
 $releaseDir = Join-Path $projectRoot 'build\x86\Release'
 $stageDir = Join-Path $projectRoot 'build\x86\package'
-$installerDir = Join-Path $projectRoot 'build\x86\installer'
+$installerDir = Join-Path $projectRoot 'installfiles'
 $varioPublishDir = Join-Path $projectRoot 'build\x86\vario\win-x86'
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
@@ -38,7 +38,8 @@ $projects = @(
     'espeak_lib.vcxproj',
     'espeak_sapi.vcxproj',
     'TTSApp.vcxproj',
-    'sapi_smoke.vcxproj'
+    'sapi_smoke.vcxproj',
+    'sapi_synthesis_test.vcxproj'
 )
 
 foreach ($project in $projects) {
@@ -49,7 +50,7 @@ foreach ($project in $projects) {
 }
 
 & dotnet publish (Join-Path $projectRoot 'platforms\windows\Vario\Vario.csproj') `
-    -c Release -r win-x86 --self-contained true -o $varioPublishDir
+    -c Release -r win-x86 --self-contained false -o $varioPublishDir
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $varioPublishDir 'Vario.exe'))) {
     throw 'The Vario x86 build failed.'
 }
@@ -66,6 +67,7 @@ if (-not $SkipTests) {
     & (Join-Path $PSScriptRoot 'test-polish-fallback.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
     & (Join-Path $PSScriptRoot 'test-polish-georgian.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
     & (Join-Path $PSScriptRoot 'test-polish-ci.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
+    & (Join-Path $PSScriptRoot 'test-polish-pronunciation.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
 
     $wavPath = Join-Path $releaseDir 'smoke-pl.wav'
     & $espeakExe --path=$projectRoot -v pl -w $wavPath '32-bit synthesis test.'
@@ -76,6 +78,13 @@ if (-not $SkipTests) {
     & (Join-Path $releaseDir 'sapi_smoke.exe') (Join-Path $releaseDir 'espeak_sapi.dll')
     if ($LASTEXITCODE -ne 0) {
         throw 'The COM/SAPI class factory test failed.'
+    }
+
+    & (Join-Path $releaseDir 'sapi_synthesis_test.exe') `
+        (Join-Path $releaseDir 'espeak_sapi.dll') $projectRoot `
+        (Join-Path $releaseDir 'sapi-smoke-pl.wav') 0
+    if ($LASTEXITCODE -ne 0) {
+        throw 'The ordinary SAPI synthesis and event timing test failed.'
     }
 }
 
@@ -101,6 +110,9 @@ Copy-Item -LiteralPath (Join-Path $projectRoot 'platforms\windows\Readme.txt') -
 Copy-Item -LiteralPath (Join-Path $projectRoot 'License.txt') -Destination $resolvedStage
 
 if (-not $SkipInstaller) {
+    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r30.exe')) {
+        throw 'Archive the existing r30 installer in snapshots before replacing it.'
+    }
     $isccCandidates = @(
         (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
         (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
@@ -120,5 +132,5 @@ if (-not $SkipInstaller) {
 Write-Host "Binaries: $releaseDir"
 Write-Host "Package:  $resolvedStage"
 if (-not $SkipInstaller) {
-    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r29.exe')"
+    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r30.exe')"
 }

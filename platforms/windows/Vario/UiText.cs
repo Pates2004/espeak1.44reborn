@@ -4,8 +4,12 @@ namespace Vario;
 
 internal static class UiText
 {
-    private static readonly bool Polish =
-        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName.Equals("pl", StringComparison.OrdinalIgnoreCase);
+    private static readonly CultureInfo SystemUiCulture = CultureInfo.CurrentUICulture;
+    private static AppLanguage language;
+    private static bool Polish => language == AppLanguage.Polish ||
+        (language == AppLanguage.System && SystemUiCulture.TwoLetterISOLanguageName.Equals("pl", StringComparison.OrdinalIgnoreCase));
+
+    internal static void SetLanguage(AppLanguage value) => language = value;
 
     internal static string Pick(string english, string polish) => Polish ? polish : english;
 
@@ -41,12 +45,15 @@ internal static class UiText
         $"Set modulation for {voice} to {value}.",
         $"Ustawiono modulację głosu {voice} na {value}.");
     internal static string Sonic => Pick(
-        "Enable additional speed boost (up to 3x)",
-        "Włącz dodatkowe przyspieszanie (do 3×)");
+        "Enable the extended speed range (Sonic)",
+        "Włącz rozszerzony zakres prędkości (Sonic)");
     internal static string SonicModeGroup => Pick("Speed boost mode", "Tryb dodatkowego przyspieszania");
     internal static string SonicModeNvda => Pick(
-        "NVDA-style: triple the speed across the entire range (default)",
-        "Jak w NVDA: trzykrotna prędkość na całej skali (domyślnie)");
+        "NVDA-style: triple the speed across the entire range",
+        "Jak w NVDA: trzykrotna prędkość na całej skali");
+    internal static string SonicModeSmooth => Pick(
+        "Smooth: full range, automatic Sonic above 300 WPM (default for new settings)",
+        "Płynny: pełny zakres, automatyczny Sonic powyżej 300 SNM (domyślnie dla nowych ustawień)");
     internal static string SonicModeLegacy => Pick(
         "Original: boost only at high positive SAPI rates",
         "Dotychczasowy: przyspieszanie tylko przy wysokich dodatnich prędkościach SAPI");
@@ -82,5 +89,52 @@ internal static class UiText
     internal static string ConfirmClose => Pick(
         "Close without applying the pending changes?",
         "Zamknąć bez zastosowania oczekujących zmian?");
+    internal static string VoicesDirectoryMissing(string path) => Pick(
+        $"The installed voice directory was not found: {path}",
+        $"Nie znaleziono katalogu zainstalowanych głosów: {path}");
+    internal static string InvalidSonicMode => Pick(
+        "The selected speed boost mode is not supported.",
+        "Wybrany tryb dodatkowego przyspieszania nie jest obsługiwany.");
+    internal static string InvalidInflection => Pick(
+        "Voice modulation must be between 0 and 100.",
+        "Modulacja głosu musi mieścić się w zakresie od 0 do 100.");
+    internal static string VoiceRegistryUnavailable => Pick(
+        "The SAPI voice registry could not be opened.",
+        "Nie udało się otworzyć rejestru głosów SAPI.");
+    internal static string CannotCreateVoiceToken(string name) => Pick(
+        $"Cannot create SAPI token {name}.",
+        $"Nie można utworzyć wpisu głosu SAPI: {name}.");
+    internal static string CannotCreateVoiceAttributes(string name) => Pick(
+        $"Cannot create attributes for {name}.",
+        $"Nie można utworzyć atrybutów wpisu głosu: {name}.");
+    internal static string PhoneConverterUnavailable => Pick(
+        "The eSpeak phone converter could not be opened.",
+        "Nie udało się otworzyć wpisu konwertera fonemów eSpeak.");
+    internal static string PhoneConverterAttributesUnavailable => Pick(
+        "The eSpeak phone converter attributes could not be opened.",
+        "Nie udało się otworzyć atrybutów konwertera fonemów eSpeak.");
+    internal static string SettingsMenuName => Pick("Settings", "Ustawienia");
+    internal static string SettingsMenu => Pick("&Settings", "U&stawienia");
+    internal static string ThemeMenu => Pick("&Theme", "&Motyw");
+    internal static string LightTheme => Pick("&Light", "&Jasny");
+    internal static string DarkTheme => Pick("&Dark", "&Ciemny");
+    internal static string LanguageMenu => Pick("&Language", "&Język");
+    internal static string SystemLanguage => Pick("&System default", "Zgodny z &systemem");
+    internal static string EnglishLanguage => Pick("&English", "&Angielski");
+    internal static string PolishLanguage => Pick("&Polish", "&Polski");
+    internal static string ShowHints => Pick("Show &hints", "Pokazuj po&dpowiedzi");
+    internal static string PreferencesSaved => Pick("Interface settings saved.", "Zapisano ustawienia interfejsu.");
+    internal static string PreferencesSaveFailed(string path) => Pick(
+        $"Interface settings could not be saved to {path}. The installation directory must be writable.",
+        $"Nie udało się zapisać ustawień interfejsu do {path}. Katalog instalacji musi zezwalać na zapis.");
+    internal static string InvalidPreferences => Pick(
+        "The selected theme or interface language is not supported.",
+        "Wybrany motyw lub język interfejsu nie jest obsługiwany.");
+    internal static string StartFailed => Pick(
+        "Vario could not start. Settings must be readable and writable beside Vario.exe.",
+        "Nie udało się uruchomić Vario. Ustawienia obok Vario.exe muszą zezwalać na odczyt i zapis.");
+    internal static string SettingsMigrated => Pick(
+        "Existing speed settings were copied to vario.ini beside Vario.exe. The original registry values were preserved.",
+        "Dotychczasowe ustawienia prędkości przeniesiono do vario.ini obok Vario.exe. Zachowano oryginalne wartości w rejestrze.");
     internal static string Warning => "Vario";
 }

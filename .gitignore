@@ -2,8 +2,13 @@
 build/
 /installfiles/
 /trash/
+/Workspace/
+/snapshots/
+/Forme/
 /platforms/windows/Vario/bin/
 /platforms/windows/Vario/obj/
+/platforms/windows/Vario.Tests/bin/
+/platforms/windows/Vario.Tests/obj/
 .vs/
 *.user
 *.suo

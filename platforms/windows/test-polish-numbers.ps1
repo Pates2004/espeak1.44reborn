@@ -63,6 +63,6 @@ $fourDecimalDigits = Get-PolishPhonemes '3,5555'
 Assert-Contains $fourDecimalDigits "p;'En^ts;tyS;'Entsy" 'Four decimal digits were not spoken as one number'
 
 $fiveDecimalDigits = Get-PolishPhonemes '3,55555'
-Assert-Contains $fiveDecimalDigits "p;En^dz;'ES;Ontp;'En^ts;tyS;'Entsy" 'Five decimal digits were not spoken as one number'
+Assert-Contains $fiveDecimalDigits "p;En^dz;dz;'ES;Ontp;'En^ts;tyS;'Entsy" 'Five decimal digits were not spoken as one number'
 
 Write-Host 'Polish number tests OK: 31 integer digits, 5 decimal digits, no synthetic spoken separators.'

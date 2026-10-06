@@ -23,6 +23,7 @@
 #include "../third_party/sonic/sonic.h"
 #include <limits.h>
 #include "sonic_speed.h"
+#include "vario_settings.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +39,7 @@ ULONGLONG event_interest;
 
 extern int AddNameData(const char *name, int wide);
 extern void InitNamedata(void);
+extern char *namedata;
 
 int master_volume = 100;
 int master_rate = 0;
@@ -68,6 +70,8 @@ typedef struct {
 	size_t bufix;
 	size_t textix;
 	size_t cmdlen;
+	int smooth_marker;
+	int smooth_rate;
 } FRAG_OFFSET;
 
 int srate;   // samplerate, Hz/50
@@ -83,6 +87,37 @@ namespace {
 bool sonic_boost_enabled = false;
 SonicSpeed::Mode sonic_mode = SonicSpeed::Mode::Nvda;
 
+struct SpeechOutputState {
+	bool active = false;
+	bool stream_required = false;
+	bool callback_failed = false;
+	bool aborted = false;
+	uint64_t input_frames = 0;
+	uint64_t audio_bytes = 0;
+	long double output_frames = 0;
+	SPEVENT* pending_events = NULL;
+	size_t pending_count = 0;
+	size_t pending_capacity = 0;
+	~SpeechOutputState() { free(pending_events); }
+};
+
+SpeechOutputState* speech_output = NULL;
+
+class SpeechOutputContext final {
+public:
+	explicit SpeechOutputContext(bool active) : previous_(speech_output)
+	{
+		state_.active = active;
+		speech_output = &state_;
+	}
+	~SpeechOutputContext() { speech_output = previous_; }
+	SpeechOutputContext(const SpeechOutputContext&) = delete;
+	SpeechOutputContext& operator=(const SpeechOutputContext&) = delete;
+private:
+	SpeechOutputState state_;
+	SpeechOutputState* previous_;
+};
+
 class SapiEngineGuard final
 {
 public:
@@ -92,6 +127,16 @@ public:
 	SapiEngineGuard(const SapiEngineGuard&) = delete;
 	SapiEngineGuard& operator=(const SapiEngineGuard&) = delete;
 };
+
+bool SpeechAbortRequested()
+{
+	if(speech_output->aborted || (m_OutputSite->GetActions() & SPVES_ABORT) != 0)
+	{
+		speech_output->aborted = true;
+		return true;
+	}
+	return false;
+}
 
 class SynthesisContext final
 {
@@ -139,57 +184,11 @@ ULONGLONG AudioStreamOffset(uint64_t audio_position_ms)
 {
 	if(srate <= 0)
 		return ULLONG_MAX;
-	const long double scaled = ((long double)audio_position_ms * (long double)srate) /
-		(10.0L * ((sonic_speed > 1.0f) ? (long double)sonic_speed : 1.0L));
-	return (scaled >= (long double)ULLONG_MAX) ? ULLONG_MAX : (ULONGLONG)scaled;
-}
-
-bool IsSonicBoostEnabled()
-{
-	HKEY key = NULL;
-	DWORD value = 0;
-	DWORD type = 0;
-	DWORD size = sizeof(value);
-	if(RegOpenKeyExW(HKEY_LOCAL_MACHINE,L"SOFTWARE\\eSpeak\\Vario",0,KEY_QUERY_VALUE,&key) != ERROR_SUCCESS)
-		return false;
-	const LONG result = RegQueryValueExW(key,L"SonicBoost",NULL,&type,
-		reinterpret_cast<BYTE*>(&value),&size);
-	RegCloseKey(key);
-	return (result == ERROR_SUCCESS) && (type == REG_DWORD) && (value != 0);
-}
-
-SonicSpeed::Mode ReadSonicMode()
-{
-	HKEY key = NULL;
-	DWORD value = 1; // New installations default to the NVDA-style mode.
-	DWORD type = 0;
-	DWORD size = sizeof(value);
-	if(RegOpenKeyExW(HKEY_LOCAL_MACHINE,L"SOFTWARE\\eSpeak\\Vario",0,KEY_QUERY_VALUE,&key) != ERROR_SUCCESS)
-		return SonicSpeed::Mode::Nvda;
-	const LONG result = RegQueryValueExW(key,L"SonicMode",NULL,&type,
-		reinterpret_cast<BYTE*>(&value),&size);
-	RegCloseKey(key);
-	return (result == ERROR_SUCCESS && type == REG_DWORD && size == sizeof(value) && value == 0)
-		? SonicSpeed::Mode::Legacy : SonicSpeed::Mode::Nvda;
-}
-
-int DrainSonicOutput()
-{
-	short output[4096];
-	while((sonic_stream != NULL) && (sonicSamplesAvailable(sonic_stream) > 0))
-	{
-		const int available = sonicSamplesAvailable(sonic_stream);
-		const int requested = (available > (int)(sizeof(output)/sizeof(output[0])))
-			? (int)(sizeof(output)/sizeof(output[0])) : available;
-		const int count = sonicReadShortFromStream(sonic_stream,output,requested);
-		if(count <= 0)
-			return 1;
-		const HRESULT result = m_OutputSite->Write(output,
-			(ULONG)((unsigned int)count*sizeof(short)),NULL);
-		if(FAILED(result))
-			return 1;
-	}
-	return 0;
+	const long double frames = ((long double)audio_position_ms * (long double)srate) /
+		(20.0L * ((sonic_speed > 1.0f) ? (long double)sonic_speed : 1.0L));
+	return frames >= static_cast<long double>(ULLONG_MAX / sizeof(short))
+		? ULLONG_MAX - ULLONG_MAX % sizeof(short)
+		: static_cast<ULONGLONG>(frames) * sizeof(short);
 }
 
 uint64_t AddAudioPosition(uint64_t base, int position)
@@ -237,6 +236,147 @@ bool EnsureFragOffsetCapacity(size_t required)
 		return false;
 	frag_offsets = resized;
 	n_frag_offsets = new_capacity;
+	return true;
+}
+
+ULONGLONG SmoothAudioStreamOffset()
+{
+	return speech_output->output_frames >= static_cast<long double>(ULLONG_MAX / sizeof(short))
+		? ULLONG_MAX - ULLONG_MAX % sizeof(short)
+		: static_cast<ULONGLONG>(speech_output->output_frames) * sizeof(short);
+}
+
+bool QueueAudioEvent(const SPEVENT& event)
+{
+	if(speech_output->pending_count == speech_output->pending_capacity)
+	{
+		size_t capacity;
+		size_t bytes;
+		if(!CheckedAddSize(speech_output->pending_capacity,100u,&capacity) ||
+			!CheckedMultiplySize(capacity,sizeof(SPEVENT),&bytes)) return false;
+		SPEVENT* resized = static_cast<SPEVENT*>(realloc(speech_output->pending_events,bytes));
+		if(resized == NULL) return false;
+		speech_output->pending_events = resized;
+		speech_output->pending_capacity = capacity;
+	}
+	speech_output->pending_events[speech_output->pending_count++] = event;
+	return true;
+}
+
+int FlushAudioEvents(uint64_t available_bytes, bool finished)
+{
+	size_t sent = 0;
+	while(sent < speech_output->pending_count)
+	{
+		if(SpeechAbortRequested()) return 1;
+		size_t count = 0;
+		while((sent + count < speech_output->pending_count) && (count < 100u))
+		{
+			SPEVENT& event = speech_output->pending_events[sent + count];
+			if(event.ullAudioStreamOffset > available_bytes)
+			{
+				if(!finished) break;
+				event.ullAudioStreamOffset = available_bytes;
+			}
+			if(event.eEventId == SPEI_VISEME)
+			{
+				const uint64_t sample_rate = static_cast<uint64_t>(srate) * 50u;
+				const uint64_t available_frames = (available_bytes - event.ullAudioStreamOffset) / sizeof(short);
+				const uint64_t duration = (static_cast<uint64_t>(event.lParam) >> 16) & 0xffffu;
+				// Sonic's real output can be shorter than its nominal rate ratio.
+				// Wait for the whole viseme; only the final flush may shorten it.
+				const uint64_t duration_frames = (duration * sample_rate + 999u) / 1000u;
+				if(duration_frames > available_frames)
+				{
+					if(!finished) break;
+					const uint64_t bounded_duration = available_frames * 1000u / sample_rate;
+					event.lParam = static_cast<LPARAM>((bounded_duration << 16) |
+						(static_cast<uint64_t>(event.lParam) & 0xffffu));
+				}
+			}
+			count++;
+		}
+		if(count == 0) break;
+		if(FAILED(m_OutputSite->AddEvents(speech_output->pending_events + sent,
+			static_cast<ULONG>(count)))) return 1;
+		sent += count;
+	}
+	if(sent > 0)
+	{
+		speech_output->pending_count -= sent;
+		memmove(speech_output->pending_events,speech_output->pending_events + sent,
+			speech_output->pending_count * sizeof(SPEVENT));
+	}
+	return 0;
+}
+
+int WriteAudioOutput(const short* samples, int count)
+{
+	if(count <= 0) return 0;
+	if(SpeechAbortRequested()) return 1;
+	const ULONG bytes = static_cast<ULONG>(static_cast<unsigned int>(count) * sizeof(short));
+	const uint64_t next_offset = speech_output->audio_bytes + bytes;
+	if(FlushAudioEvents(next_offset,false) != 0) return 1;
+	const BYTE* data = reinterpret_cast<const BYTE*>(samples);
+	ULONG total_written = 0;
+	while(total_written < bytes)
+	{
+		if(SpeechAbortRequested()) return 1;
+		ULONG written = 0;
+		const ULONG remaining = bytes - total_written;
+		if(FAILED(m_OutputSite->Write(data + total_written,remaining,&written)) ||
+			written == 0 || written > remaining) return 1;
+		total_written += written;
+		speech_output->audio_bytes += written;
+	}
+	return 0;
+}
+
+int DrainAudioOutput()
+{
+	short output[4096];
+	while(sonicSamplesAvailable(sonic_stream) > 0)
+	{
+		const int requested = sonicSamplesAvailable(sonic_stream) > static_cast<int>(_countof(output))
+			? static_cast<int>(_countof(output)) : sonicSamplesAvailable(sonic_stream);
+		const int count = sonicReadShortFromStream(sonic_stream,output,requested);
+		if(count <= 0 || WriteAudioOutput(output,count) != 0) return 1;
+	}
+	return 0;
+}
+
+int WriteSmoothInput(const short* samples, int count)
+{
+	if(count <= 0) return 0;
+	if(sonic_stream != NULL)
+	{
+		if(!sonicWriteShortToStream(sonic_stream,const_cast<short*>(samples),count) ||
+			DrainAudioOutput() != 0) return 1;
+	}
+	else if(WriteAudioOutput(samples,count) != 0) return 1;
+	speech_output->input_frames += static_cast<unsigned int>(count);
+	speech_output->output_frames += static_cast<long double>(count) / sonic_speed;
+	return 0;
+}
+
+bool GetSmoothMarkerRate(const espeak_EVENT& event, int* rate)
+{
+	if(event.type != espeakEVENT_MARK || event.id.name == NULL || namedata == NULL)
+		return false;
+	const uintptr_t address = reinterpret_cast<uintptr_t>(event.id.name);
+	const uintptr_t base = reinterpret_cast<uintptr_t>(namedata);
+	if(address < base || address - base > INT_MAX) return false;
+	const int marker = static_cast<int>(address - base);
+	size_t first = 0;
+	size_t last = frag_count;
+	while(first < last)
+	{
+		const size_t middle = first + (last - first) / 2;
+		if(frag_offsets[middle].smooth_marker < marker) first = middle + 1;
+		else last = middle;
+	}
+	if(first >= frag_count || frag_offsets[first].smooth_marker != marker) return false;
+	*rate = frag_offsets[first].smooth_rate;
 	return true;
 }
 
@@ -328,33 +468,101 @@ int VisemeCode(unsigned int phoneme_name)
 
 int SynthCallback(short *wav, int numsamples, espeak_EVENT *events);
 
-int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
+static int SmoothSynthCallback(short *wav, int numsamples, espeak_EVENT *events)
+{
+	if(numsamples < 0 || (numsamples > 0 && wav == NULL) ||
+		static_cast<unsigned int>(numsamples) > ULONG_MAX / sizeof(short)) return 1;
+	const uint64_t buffer_start = speech_output->input_frames;
+	int consumed = 0;
+	for(espeak_EVENT* event = events; event->type != espeakEVENT_LIST_TERMINATED; event++)
+	{
+		const uint64_t position = event->sample > 0 ? static_cast<unsigned int>(event->sample) : 0;
+		const uint64_t relative = position > buffer_start ? position - buffer_start : 0;
+		const int boundary = relative > static_cast<unsigned int>(numsamples)
+			? numsamples : static_cast<int>(relative);
+		if(boundary > consumed)
+		{
+			if(WriteSmoothInput(wav + consumed,boundary - consumed) != 0) return 1;
+			consumed = boundary;
+		}
+		int marker_rate = 0;
+		if(GetSmoothMarkerRate(*event,&marker_rate))
+		{
+			sonic_speed = marker_rate > SonicSpeed::SmoothThreshold
+				? static_cast<float>(marker_rate) / SonicSpeed::SmoothThreshold : 1.0f;
+			if(sonic_stream != NULL) sonicSetSpeed(sonic_stream,sonic_speed);
+			continue;
+		}
+		SPEVENT output_event = {};
+		output_event.ullAudioStreamOffset = SmoothAudioStreamOffset();
+		if(event->type == espeakEVENT_WORD && event->length > 0 && frag_count > 0)
+		{
+			const size_t position_in_text = event->text_position > 0
+				? static_cast<size_t>(event->text_position - 1) : 0;
+			while(frag_ix + 1 < frag_count && position_in_text >=
+				frag_offsets[frag_ix + 1].bufix - frag_offsets[frag_ix + 1].cmdlen) frag_ix++;
+			const size_t command_length = frag_offsets[frag_ix].cmdlen;
+			const size_t adjusted_position = position_in_text + command_length;
+			const size_t relative_position = adjusted_position >= frag_offsets[frag_ix].bufix
+				? adjusted_position - frag_offsets[frag_ix].bufix : 0;
+			size_t text_offset;
+			if(!CheckedAddSize(frag_offsets[frag_ix].textix,relative_position,&text_offset)) return 1;
+			const size_t length = static_cast<size_t>(event->length) > command_length
+				? static_cast<size_t>(event->length) - command_length : 0;
+			frag_offsets[frag_ix].cmdlen = 0;
+			output_event.eEventId = SPEI_WORD_BOUNDARY;
+			output_event.elParamType = SPET_LPARAM_IS_UNDEFINED;
+			output_event.lParam = SizeToLParam(text_offset);
+			output_event.wParam = length;
+		}
+		else if(event->type == espeakEVENT_MARK && event->id.name != NULL)
+		{
+			output_event.eEventId = SPEI_TTS_BOOKMARK;
+			output_event.elParamType = SPET_LPARAM_IS_STRING;
+			output_event.lParam = reinterpret_cast<LPARAM>(event->id.name);
+			output_event.wParam = wcstol(reinterpret_cast<const wchar_t*>(event->id.name),NULL,10);
+		}
+		else if(event->type == espeakEVENT_PHONEME &&
+			(event_interest & (1ULL << SPEI_VISEME)) != 0)
+		{
+			const int viseme = VisemeCode(event->id.number);
+			if(viseme == 255) continue;
+			const uint64_t milliseconds = static_cast<uint64_t>(
+				speech_output->output_frames * 1000.0L / (srate * 50));
+			uint64_t duration = milliseconds >= prev_phoneme_time
+				? milliseconds - prev_phoneme_time : 0;
+			if(duration > 0xffffu) duration = 0xffffu;
+			output_event.eEventId = SPEI_VISEME;
+			output_event.elParamType = SPET_LPARAM_IS_UNDEFINED;
+			output_event.ullAudioStreamOffset = prev_phoneme_position;
+			output_event.lParam = static_cast<LPARAM>((duration << 16) | static_cast<unsigned int>(viseme));
+			output_event.wParam = VisemeCode(prev_phoneme);
+			prev_phoneme = event->id.number;
+			prev_phoneme_time = milliseconds;
+			prev_phoneme_position = SmoothAudioStreamOffset();
+		}
+		else continue;
+		if(!QueueAudioEvent(output_event)) return 1;
+	}
+	return consumed < numsamples ? WriteSmoothInput(wav + consumed,numsamples - consumed) : 0;
+}
+
+static int LegacySynthCallback(short *wav, int numsamples, espeak_EVENT *events)
 {//================================================================
-	HRESULT hr;
 	wchar_t *tailptr;
 	size_t text_offset;
 	size_t length;
-	uint64_t phoneme_duration;
 	int this_viseme;
 
 	espeak_EVENT *event;
-#define N_EVENTS 100
-	int n_Events = 0;
-	SPEVENT *Event;
-	SPEVENT Events[N_EVENTS];
+	if(numsamples < 0 || (numsamples > 0 && wav == NULL) ||
+		static_cast<unsigned int>(numsamples) > ULONG_MAX / sizeof(short)) return 1;
 
-	if((m_EngObj == NULL) || (m_OutputSite == NULL) || (events == NULL))
-		return(1);
-
-	if(m_OutputSite->GetActions() & SPVES_ABORT)
-		return(1);
-
-	m_EngObj->CheckActions(m_OutputSite);
-
-	// return the events
-	for(event=events; (event->type != 0) && (n_Events < N_EVENTS); event++)
+	// Queue every delivered event; dispatch bounded batches against actual PCM.
+	for(event=events; event->type != espeakEVENT_LIST_TERMINATED; event++)
 	{
-
+		SPEVENT output_event = {};
+		SPEVENT* Event = &output_event;
 		audio_latest = AddAudioPosition(audio_offset,event->audio_position);
 
 		if((event->type == espeakEVENT_WORD) && (event->length > 0) &&
@@ -380,7 +588,6 @@ int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
 				? (size_t)event->length-command_length : 0;
 			frag_offsets[frag_ix].cmdlen = 0;
 
-			Event = &Events[n_Events++];
 			Event->eEventId             = SPEI_WORD_BOUNDARY;
 			Event->elParamType          = SPET_LPARAM_IS_UNDEFINED;
 			Event->ullAudioStreamOffset = AudioStreamOffset(audio_latest);
@@ -389,7 +596,6 @@ int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
 		}
 		if((event->type == espeakEVENT_MARK) && (event->id.name != NULL))
 		{
-			Event = &Events[n_Events++];
 			Event->eEventId             = SPEI_TTS_BOOKMARK;
 			Event->elParamType          = SPET_LPARAM_IS_STRING;
 			Event->ullAudioStreamOffset = AudioStreamOffset(audio_latest);
@@ -398,64 +604,62 @@ int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
 		}
 		if(event->type == espeakEVENT_PHONEME)
 		{
-			if(event_interest & SPEI_VISEME)
+			if(event_interest & (1ULL << SPEI_VISEME))
 			{
-				phoneme_duration = (audio_latest >= prev_phoneme_time)
-					? audio_latest-prev_phoneme_time : 0;
-
 				// ignore some phonemes (which translate to viseme=255)
 				if((this_viseme = VisemeCode(event->id.number)) != 255)
 				{
-					Event = &Events[n_Events++];
+					const uint64_t current_position = AudioStreamOffset(audio_latest);
+					const uint64_t duration_bytes = current_position >= prev_phoneme_position
+						? current_position - prev_phoneme_position : 0;
+					uint64_t phoneme_duration = static_cast<uint64_t>(
+						static_cast<long double>(duration_bytes) * 1000.0L / (srate * 50 * sizeof(short)));
 					Event->eEventId             = SPEI_VISEME;
 					Event->elParamType          = SPET_LPARAM_IS_UNDEFINED;
-					Event->ullAudioStreamOffset = AudioStreamOffset(prev_phoneme_position);
+					Event->ullAudioStreamOffset = prev_phoneme_position;
 					if(phoneme_duration > 0xffffu)
 						phoneme_duration = 0xffffu;
 					Event->lParam               = (LPARAM)((phoneme_duration << 16) | (uint64_t)this_viseme);
 					Event->wParam               = VisemeCode(prev_phoneme);
 
 					prev_phoneme = event->id.number;
-					prev_phoneme_time = audio_latest;
-					prev_phoneme_position = audio_latest;
+					prev_phoneme_position = current_position;
 				}
 			}
 		}
-#ifdef deleted
-		if(event->type == espeakEVENT_SENTENCE)
-		{
-			Event = &Events[n_Events++];
-			Event->eEventId             = SPEI_SENTENCE_BOUNDARY;
-			Event->elParamType          = SPET_LPARAM_IS_UNDEFINED;
-			Event->ullAudioStreamOffset = ((event->audio_position + audio_offset) * srate)/10;  // ms -> bytes
-			Event->lParam               = 0;
-			Event->wParam               = 0;  // TEMP
-		}
-#endif
-	}
-	if(n_Events > 0)
-	{
-		hr = m_OutputSite->AddEvents(Events, n_Events );
-		if(FAILED(hr))
-			return(1);
+		if(output_event.eEventId != 0 && !QueueAudioEvent(output_event)) return 1;
 	}
 
 	// return the sound data
 	if(numsamples <= 0)
 		return(0);
-	if((wav == NULL) || ((unsigned int)numsamples > (ULONG_MAX/sizeof(short))))
-		return(1);
 	if(sonic_stream != NULL)
 	{
 		if(!sonicWriteShortToStream(sonic_stream,wav,numsamples))
 			return(1);
-		return DrainSonicOutput();
+		return DrainAudioOutput();
 	}
-	hr = m_OutputSite->Write(wav,(ULONG)((unsigned int)numsamples*sizeof(short)),NULL);
-	return(FAILED(hr) ? 1 : 0);
+	return WriteAudioOutput(wav,numsamples);
 }
 
-
+int SynthCallback(short *wav, int numsamples, espeak_EVENT *events)
+{
+	if(m_EngObj == NULL || m_OutputSite == NULL || events == NULL || speech_output == NULL)
+	{
+		if(speech_output != NULL) speech_output->callback_failed = true;
+		return 1;
+	}
+	if(SpeechAbortRequested()) return 1;
+	if(FAILED(m_EngObj->CheckActions(m_OutputSite)))
+	{
+		speech_output->callback_failed = true;
+		return 1;
+	}
+	const int result = speech_output->active
+		? SmoothSynthCallback(wav,numsamples,events) : LegacySynthCallback(wav,numsamples,events);
+	if(result != 0 && !speech_output->aborted) speech_output->callback_failed = true;
+	return result;
+}
 
 static int ConvertRate(int new_rate)
 {//=================================
@@ -802,7 +1006,7 @@ HRESULT CTTSEngObj::ProcessFragList(const SPVTEXTFRAG* pTextFragList,
 	wchar_t *output, size_t output_capacity, ISpTTSEngineSite* pOutputSite,
 	size_t *output_length, size_t *text_fragment_count)
 {//==========================================================================
-	static const size_t command_buffer_size = 50;
+	static const size_t command_buffer_size = 128;
 	static const size_t bookmark_measurement_size = 16;
 	const SPVTEXTFRAG* slow = pTextFragList;
 	const SPVTEXTFRAG* fast = pTextFragList;
@@ -825,6 +1029,8 @@ HRESULT CTTSEngObj::ProcessFragList(const SPVTEXTFRAG* pTextFragList,
 
 	size_t total = 0;
 	size_t text_count = 0;
+	int previous_smooth_rate = -1;
+	int previous_smooth_marker = -1;
 	while(pTextFragList != NULL)
 	{
 		const int action = pTextFragList->State.eAction;
@@ -851,6 +1057,23 @@ HRESULT CTTSEngObj::ProcessFragList(const SPVTEXTFRAG* pTextFragList,
 			const int pitch = ConvertPitch(state->PitchAdj.MiddleAdj);
 			const int range = ConvertRange(state->PitchAdj.RangeAdj);
 			const int emphasis = (state->EmphAdj != 0) ? 3 : 0;
+			int smooth_marker = -1;
+			int smooth_rate = 0;
+			if(output != NULL && speech_output != NULL && speech_output->active)
+			{
+				smooth_rate = SonicSpeed::SmoothRate(master_rate,state->RateAdj);
+				if(smooth_rate != previous_smooth_rate)
+				{
+					smooth_marker = AddNameData(reinterpret_cast<const char*>(L""),1);
+					if(smooth_marker < 0) return E_OUTOFMEMORY;
+					if(!AppendEmbeddedCommand(cmdbuf,sizeof(cmdbuf),&command_length,smooth_marker,'M'))
+						return E_UNEXPECTED;
+					previous_smooth_rate = smooth_rate;
+					previous_smooth_marker = smooth_marker;
+				}
+				else smooth_marker = previous_smooth_marker;
+				if(smooth_rate > SonicSpeed::SmoothThreshold) speech_output->stream_required = true;
+			}
 
 			if((volume != gVolume) && !AppendEmbeddedCommand(cmdbuf,sizeof(cmdbuf),&command_length,volume,'A')) return E_UNEXPECTED;
 			if((speed != gSpeed) && !AppendEmbeddedCommand(cmdbuf,sizeof(cmdbuf),&command_length,speed,'S')) return E_UNEXPECTED;
@@ -884,6 +1107,8 @@ HRESULT CTTSEngObj::ProcessFragList(const SPVTEXTFRAG* pTextFragList,
 				frag_offsets[text_count].textix = (size_t)pTextFragList->ulTextSrcOffset;
 				frag_offsets[text_count].bufix = total+command_length;
 				frag_offsets[text_count].cmdlen = command_length;
+				frag_offsets[text_count].smooth_marker = smooth_marker;
+				frag_offsets[text_count].smooth_rate = smooth_rate;
 				if(pTextFragList->ulTextLen > 0)
 				{
 					size_t text_bytes;
@@ -1033,12 +1258,15 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 	result = CheckActions(pOutputSite);
 	if(FAILED(result))
 		return result;
-	sonic_boost_enabled = IsSonicBoostEnabled();
-	sonic_mode = ReadSonicMode();
+	const VarioSettings::SpeedSettings speed_settings = VarioSettings::ReadSpeedSettings();
+	sonic_boost_enabled = speed_settings.boost;
+	sonic_mode = static_cast<SonicSpeed::Mode>(speed_settings.mode);
 	const int sonic_rate = SonicSpeed::Target(master_rate,sonic_boost_enabled,sonic_mode);
+	const bool smooth = sonic_boost_enabled && sonic_mode == SonicSpeed::Mode::Smooth;
+	SpeechOutputContext output_context(smooth);
 	sonic_speed = 1.0f;
-	if(sonic_rate > espeakRATE_MAXIMUM)
-		sonic_speed = (float)sonic_rate / (float)espeakRATE_NORMAL;
+	if(sonic_rate > 0)
+		sonic_speed = (float)sonic_rate / (float)(smooth ? SonicSpeed::SmoothThreshold : espeakRATE_NORMAL);
 
 	const int saved_volume = gVolume;
 	const int saved_speed = gSpeed;
@@ -1093,11 +1321,13 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 	if(text_characters > 0)
 	{
 		SynthesisContext context(this,pOutputSite);
-		const int adjusted_sonic_rate = espeak_SetSonicRate(sonic_rate);
-		sonic_speed = (adjusted_sonic_rate > espeakRATE_MAXIMUM)
-			? (float)adjusted_sonic_rate / (float)espeakRATE_NORMAL
-			: 1.0f;
-		if(sonic_speed > 1.0f)
+		const int adjusted_sonic_rate = espeak_SetSonicRate(smooth ? 0 : sonic_rate);
+		if(smooth)
+			sonic_speed = 1.0f;
+		else
+			sonic_speed = (adjusted_sonic_rate > 0)
+				? (float)adjusted_sonic_rate / (float)espeakRATE_NORMAL : 1.0f;
+		if(sonic_speed > 1.0f || (smooth && speech_output->stream_required))
 		{
 			sonic_stream = sonicCreateStream(srate*50,1);
 			if(sonic_stream == NULL)
@@ -1112,17 +1342,24 @@ STDMETHODIMP CTTSEngObj::Speak( DWORD dwSpeakFlags,
 		const espeak_ERROR synth_result = espeak_Synth(TextBuf,0,0,POS_CHARACTER,0,
 			espeakCHARS_WCHAR | espeakKEEP_NAMEDATA | espeakPHONEMES,NULL,NULL);
 		espeak_SetSonicRate(0);
-		int sonic_result = 0;
+		int sonic_result = speech_output->callback_failed ? 1 : 0;
+		// A normal SAPI Stop succeeds but must not flush buffered speech/events.
+		SpeechAbortRequested();
 		if(sonic_stream != NULL)
 		{
-			if((synth_result == EE_OK) && !sonicFlushStream(sonic_stream))
+			if(!speech_output->aborted && synth_result == EE_OK &&
+				sonic_result == 0 && !sonicFlushStream(sonic_stream))
 				sonic_result = 1;
-			if((sonic_result == 0) && (DrainSonicOutput() != 0))
+			if(!speech_output->aborted && sonic_result == 0 &&
+				DrainAudioOutput() != 0 && !speech_output->aborted)
 				sonic_result = 1;
 			sonicDestroyStream(sonic_stream);
 			sonic_stream = NULL;
 		}
 		sonic_speed = 1.0f;
+		if(!speech_output->aborted && synth_result == EE_OK && sonic_result == 0 &&
+			FlushAudioEvents(speech_output->audio_bytes,true) != 0 && !speech_output->aborted)
+			sonic_result = 1;
 		if((synth_result != EE_OK) || (sonic_result != 0))
 			return E_FAIL;
 	}

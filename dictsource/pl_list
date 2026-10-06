@@ -44,20 +44,20 @@ _17		S;EdEmn'aS;ts;E
 _18		OS;Emn'aS;ts;E
 _19		dz;Ev;Etn'aS;ts;E
 _2X		dvadz;'ES;ts;a
-_3X		t|Sydz;'ES;c;i
-_4X		tStERdz;'ES;c;i
-_5X		p;En^dz;'ES;Ont
-_6X		SEZ;dz;'ES;Ont
+_3X		t|Sydz;'ES;ts;i
+_4X		tStERdz;'ES;ts;i
+_5X		p;En^ts;dz;'ES;Ont
+_6X		SES;ts;dz;'ES;Ont
 _7X		S;EdEmdz;'ES;Ont
 _8X		OS;Emdz;'ES;Ont
-_9X		dz;Ev;En^dz;'ES;Ont
+_9X		dz;Ev;En^ts;dz;'ES;Ont
 
 _1C		st'O
-_2C		dv;'ES;c;E
+_2C		dv;'ES;ts;E
 _3C		t|S'ysta
 _4C		tSt'ERysta
 _5C		p;'En^ts;sEt
-_6C		S'ES;sEt
+_6C		S'ES;ts;sEt
 _7C		S;'EdEmsEt
 _8C		'OS;EmsEt
 _9C		dz;'Ev;En^ts;sEt

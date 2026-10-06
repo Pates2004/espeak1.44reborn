@@ -5,9 +5,18 @@ using System.Text.RegularExpressions;
 namespace Vario;
 
 internal sealed record VoiceConfiguration(string Name, int Inflection);
-internal enum SonicMode { Legacy = 0, Nvda = 1 }
+internal enum SonicMode { Legacy = 0, Nvda = 1, Smooth = 2 }
 
-internal sealed class RegistryService : IDisposable
+internal interface IVoiceRegistry : IDisposable
+{
+    string ArchitectureName { get; }
+    IReadOnlyList<VoiceConfiguration> ReadInstalledVoices();
+    (IReadOnlyList<string> Voices, IReadOnlyList<string> Variants) DiscoverAvailableVoices();
+    LegacySpeedSettings ReadLegacySpeedSettings();
+    void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices);
+}
+
+internal sealed class RegistryService : IVoiceRegistry
 {
     private const string VoicesKey = @"SOFTWARE\Microsoft\Speech\Voices\Tokens";
     private const string PhoneConvertersKey = @"SOFTWARE\Microsoft\Speech\PhoneConverters\Tokens";
@@ -23,9 +32,9 @@ internal sealed class RegistryService : IDisposable
         machine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
     }
 
-    internal string ArchitectureName => Environment.Is64BitProcess ? "64-bit" : "32-bit";
+    public string ArchitectureName => Environment.Is64BitProcess ? "64-bit" : "32-bit";
 
-    internal IReadOnlyList<VoiceConfiguration> ReadInstalledVoices()
+    public IReadOnlyList<VoiceConfiguration> ReadInstalledVoices()
     {
         using RegistryKey? tokens = machine.OpenSubKey(VoicesKey, writable: false);
         if (tokens is null)
@@ -47,11 +56,11 @@ internal sealed class RegistryService : IDisposable
             .ToArray();
     }
 
-    internal (IReadOnlyList<string> Voices, IReadOnlyList<string> Variants) DiscoverAvailableVoices()
+    public (IReadOnlyList<string> Voices, IReadOnlyList<string> Variants) DiscoverAvailableVoices()
     {
         string root = Path.Combine(AppContext.BaseDirectory, "espeak-data", "voices");
         if (!Directory.Exists(root))
-            throw new DirectoryNotFoundException(root);
+            throw new DirectoryNotFoundException(UiText.VoicesDirectoryMissing(root));
 
         List<string> voices = new();
         foreach (string file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
@@ -75,35 +84,30 @@ internal sealed class RegistryService : IDisposable
                 .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(value => value, StringComparer.CurrentCultureIgnoreCase).ToArray());
     }
 
-    internal bool ReadSonicBoost()
+    public LegacySpeedSettings ReadLegacySpeedSettings()
     {
         using RegistryKey? settings = machine.OpenSubKey(SettingsKey, writable: false);
-        return settings?.GetValue("SonicBoost") is int value && value != 0;
+        object? boost = settings?.GetValue("SonicBoost");
+        object? mode = settings?.GetValue("SonicMode");
+        SonicMode parsedMode = mode is int value && Enum.IsDefined((SonicMode)value)
+            ? (SonicMode)value : SonicMode.Nvda;
+        return new(boost is not null || mode is not null, boost is int enabled && enabled != 0, parsedMode);
     }
 
-    internal SonicMode ReadSonicMode()
+    public void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices)
     {
-        using RegistryKey? settings = machine.OpenSubKey(SettingsKey, writable: false);
-        return settings?.GetValue("SonicMode") is int value && value == (int)SonicMode.Legacy
-            ? SonicMode.Legacy : SonicMode.Nvda;
-    }
-
-    internal void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices, bool sonicBoost, SonicMode sonicMode)
-    {
-        if (sonicMode is not (SonicMode.Legacy or SonicMode.Nvda))
-            throw new ArgumentOutOfRangeException(nameof(sonicMode));
         VoiceConfiguration[] voices = requestedVoices
             .Where(value => !string.IsNullOrWhiteSpace(value.Name))
             .Select(value => new VoiceConfiguration(value.Name.Trim(), value.Inflection))
             .DistinctBy(value => value.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (voices.Length > 200)
-            throw new InvalidOperationException("No more than 200 SAPI voices can be registered.");
+            throw new InvalidOperationException(UiText.TooManyVoices(200));
         if (voices.Any(value => value.Inflection is < 0 or > 100))
-            throw new InvalidOperationException("Voice modulation must be between 0 and 100.");
+            throw new InvalidOperationException(UiText.InvalidInflection);
 
         using RegistryKey tokens = machine.CreateSubKey(VoicesKey, writable: true)
-            ?? throw new InvalidOperationException("The SAPI voice registry could not be opened.");
+            ?? throw new InvalidOperationException(UiText.VoiceRegistryUnavailable);
         string[] previousNames = GetManagedTokenNames(tokens).ToArray();
         HashSet<string> desiredNames = new(StringComparer.OrdinalIgnoreCase);
 
@@ -118,10 +122,6 @@ internal sealed class RegistryService : IDisposable
         foreach (string obsolete in previousNames.Where(name => !desiredNames.Contains(name)))
             tokens.DeleteSubKeyTree(obsolete, throwOnMissingSubKey: false);
 
-        using RegistryKey settings = machine.CreateSubKey(SettingsKey, writable: true)
-            ?? throw new InvalidOperationException("The Vario settings registry could not be opened.");
-        settings.SetValue("SonicBoost", sonicBoost ? 1 : 0, RegistryValueKind.DWord);
-        settings.SetValue("SonicMode", (int)sonicMode, RegistryValueKind.DWord);
     }
 
     private static IEnumerable<string> GetManagedTokenNames(RegistryKey tokens) =>
@@ -139,7 +139,7 @@ internal sealed class RegistryService : IDisposable
     {
         string voice = configuration.Name;
         using RegistryKey token = tokens.CreateSubKey(keyName, writable: true)
-            ?? throw new InvalidOperationException($"Cannot create SAPI token {keyName}.");
+            ?? throw new InvalidOperationException(UiText.CannotCreateVoiceToken(keyName));
         string displayVoice = voice.Equals("default", StringComparison.OrdinalIgnoreCase)
             ? "default" : voice.ToUpperInvariant();
         token.SetValue(string.Empty, "eSpeak-" + displayVoice, RegistryValueKind.String);
@@ -149,7 +149,7 @@ internal sealed class RegistryService : IDisposable
         token.SetValue("Inflection", configuration.Inflection, RegistryValueKind.DWord);
 
         using RegistryKey attributes = token.CreateSubKey("Attributes", writable: true)
-            ?? throw new InvalidOperationException($"Cannot create attributes for {keyName}.");
+            ?? throw new InvalidOperationException(UiText.CannotCreateVoiceAttributes(keyName));
         attributes.SetValue("Name", "eSpeak-" + voice, RegistryValueKind.String);
         attributes.SetValue("Gender", VariantIsFemale(voice) ? "Female" : "Male", RegistryValueKind.String);
         attributes.SetValue("Age", "Adult", RegistryValueKind.String);
@@ -166,11 +166,11 @@ internal sealed class RegistryService : IDisposable
     private void EnsurePhoneConverter(string languageCode)
     {
         using RegistryKey converter = machine.CreateSubKey(PhoneConvertersKey + @"\eSpeak", writable: true)
-            ?? throw new InvalidOperationException("The eSpeak phone converter could not be opened.");
+            ?? throw new InvalidOperationException(UiText.PhoneConverterUnavailable);
         converter.SetValue("CLSID", PhoneConverterClsid, RegistryValueKind.String);
         converter.SetValue("PhoneMap", "- 0001", RegistryValueKind.String);
         using RegistryKey attributes = converter.CreateSubKey("Attributes", writable: true)
-            ?? throw new InvalidOperationException("The eSpeak phone converter attributes could not be opened.");
+            ?? throw new InvalidOperationException(UiText.PhoneConverterAttributesUnavailable);
         string current = attributes.GetValue("Language") as string ?? string.Empty;
         HashSet<string> languages = current.Split(';', StringSplitOptions.RemoveEmptyEntries)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);

@@ -6,6 +6,14 @@ internal static class Program
     private static void Main()
     {
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm());
+        try
+        {
+            Application.Run(new MainForm());
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(UiText.StartFailed + Environment.NewLine + exception.Message, UiText.Warning,
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 }

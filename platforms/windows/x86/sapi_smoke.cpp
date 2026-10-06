@@ -8,6 +8,21 @@
 static bool VerifySonicModes()
 {
     using SonicSpeed::Mode;
+    int previous = 0;
+    for (int rate = -10; rate <= 10; ++rate) {
+        const int native_rate = SonicSpeed::NativeRate(rate, 0, true, Mode::Smooth);
+        const int target = SonicSpeed::Target(rate, true, Mode::Smooth);
+        const int effective = target > 0 ? target : native_rate;
+        if (native_rate < 80 || native_rate > 300 || effective <= previous) return false;
+        previous = effective;
+    }
+    if (SonicSpeed::SmoothRate(-2147483647, -100) != 80 ||
+        SonicSpeed::SmoothRate(2147483647, 100) != 1350 ||
+        SonicSpeed::NativeRate(-10, 0, true, Mode::Smooth) != 80 ||
+        SonicSpeed::NativeRate(0, 0, true, Mode::Smooth) != 300 ||
+        SonicSpeed::Target(0, true, Mode::Smooth) != 0 ||
+        SonicSpeed::Target(10, true, Mode::Smooth) != 1350 ||
+        SonicSpeed::NativeRate(0, 0, false, Mode::Smooth) != 187) return false;
     return SonicSpeed::Rate(-10) == 80 && SonicSpeed::Rate(0) == 187 &&
         SonicSpeed::Rate(10) == 450 && SonicSpeed::Rate(10, 10) == 450 &&
         SonicSpeed::NativeRate(-10, 0, true, Mode::Nvda) == 240 &&

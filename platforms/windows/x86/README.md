@@ -17,10 +17,15 @@ powershell -ExecutionPolicy Bypass -File platforms\windows\build-x86.ps1
 Requirements:
 
 - Visual Studio Build Tools 2022 with the MSVC x86 toolchain and Windows SDK;
+- .NET 10 SDK for Vario;
 - Inno Setup 6 (`winget install JRSoftware.InnoSetup`) for the installer only.
 
 Use `-SkipInstaller` when only the binaries are needed. The build uses the
-same script to publish the self-contained x86 Vario voice manager. The regular
+same script to publish the framework-dependent x86 Vario voice manager as a
+single executable. Vario requires .NET Desktop Runtime 10 x86 on the target
+computer, including 64-bit Windows; the standard .NET app host offers its
+download if it is missing. The runtime is not bundled with Vario or the
+installer. The regular
 installer places Vario beside eSpeak and adds it to the eSpeak Start menu
 group. Vario manages this edition's 32-bit SAPI registry view and its optional
 Sonic speed boost.

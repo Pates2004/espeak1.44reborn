@@ -4,7 +4,22 @@ internal sealed class MainForm : Form
 {
     private const int MaximumVoiceCount = 200;
 
-    private readonly RegistryService registry = new();
+    private readonly IVoiceRegistry registry;
+    private readonly SettingsStore settingsStore;
+    private VarioSettings preferences;
+    private readonly MenuStrip settingsMenu = new();
+    private readonly ToolStripMenuItem settingsMenuItem = new();
+    private readonly ToolStripMenuItem themeMenu = new();
+    private readonly ToolStripMenuItem lightThemeItem = new();
+    private readonly ToolStripMenuItem darkThemeItem = new();
+    private readonly ToolStripMenuItem languageMenu = new();
+    private readonly ToolStripMenuItem systemLanguageItem = new();
+    private readonly ToolStripMenuItem englishLanguageItem = new();
+    private readonly ToolStripMenuItem polishLanguageItem = new();
+    private readonly ToolStripMenuItem showHintsItem = new();
+    private readonly List<Action> localizedText = new();
+    private readonly Label availableHelp = CreateHelpLabel();
+    private readonly Label installedHelp = CreateHelpLabel();
     private readonly TriStateTreeView availableTree = new()
     {
         FullRowSelect = true,
@@ -29,6 +44,7 @@ internal sealed class MainForm : Form
     private readonly CheckBox sonicCheck = new() { AutoSize = true };
     private readonly RadioButton sonicModeNvda = new() { AutoSize = true };
     private readonly RadioButton sonicModeLegacy = new() { AutoSize = true };
+    private readonly RadioButton sonicModeSmooth = new() { AutoSize = true };
     private readonly AnnouncingLabel statusLabel = new() { AutoSize = false, AutoEllipsis = true };
 
     private IReadOnlyList<string> catalogVoices = Array.Empty<string>();
@@ -43,8 +59,15 @@ internal sealed class MainForm : Form
     private bool dirty;
     private bool allowClose;
 
-    internal MainForm()
+    internal MainForm(IVoiceRegistry? registry = null, SettingsStore? settingsStore = null)
     {
+        this.registry = registry ?? new RegistryService();
+        this.settingsStore = settingsStore ?? new SettingsStore(AppContext.BaseDirectory, this.registry.ReadLegacySpeedSettings);
+        LoadedSettings loadedSettings = this.settingsStore.Load();
+        preferences = loadedSettings.Value;
+        UiText.SetLanguage(preferences.Language);
+        if (loadedSettings.NeedsInitialization)
+            this.settingsStore.Save(preferences);
         Text = UiText.Title;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(840, 680);
@@ -53,8 +76,11 @@ internal sealed class MainForm : Form
         Font = new Font("Segoe UI", 9F);
         BuildInterface();
         FormClosing += OnFormClosing;
-        FormClosed += (_, _) => registry.Dispose();
+        FormClosed += (_, _) => this.registry.Dispose();
+        Shown += (_, _) => Appearance.Apply(this, settingsMenu, preferences.Theme);
         LoadData();
+        if (loadedSettings.MigratedLegacy)
+            SetStatus(UiText.SettingsMigrated);
     }
 
     private void BuildInterface()
@@ -104,15 +130,7 @@ internal sealed class MainForm : Form
         availableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         availableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         availableLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        Label availableHelp = new()
-        {
-            Text = UiText.AvailableTreeHelp,
-            AutoSize = true,
-            MaximumSize = new Size(420, 0),
-            AccessibleRole = AccessibleRole.StaticText,
-            TabStop = false,
-            Margin = new Padding(0, 0, 0, 6)
-        };
+        availableHelp.Text = UiText.AvailableTreeHelp;
         availableTree.Dock = DockStyle.Fill;
         availableTree.TabIndex = 0;
         availableTree.AccessibleName = UiText.AvailableGroup;
@@ -135,15 +153,7 @@ internal sealed class MainForm : Form
         installedLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         installedLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         installedLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        Label installedHelp = new()
-        {
-            Text = UiText.InstalledTreeHelp,
-            AutoSize = true,
-            MaximumSize = new Size(420, 0),
-            AccessibleRole = AccessibleRole.StaticText,
-            TabStop = false,
-            Margin = new Padding(0, 0, 0, 6)
-        };
+        installedHelp.Text = UiText.InstalledTreeHelp;
         installedTree.Dock = DockStyle.Fill;
         installedTree.TabIndex = 2;
         installedTree.AccessibleName = UiText.InstalledGroup;
@@ -217,12 +227,16 @@ internal sealed class MainForm : Form
             WrapContents = false
         };
         sonicModeNvda.Text = UiText.SonicModeNvda;
-        sonicModeNvda.TabIndex = 6;
-        sonicModeNvda.Checked = true;
+        sonicModeNvda.TabIndex = 7;
         sonicModeNvda.CheckedChanged += (_, _) => { if (!loading) UpdateDirty(); };
         sonicModeLegacy.Text = UiText.SonicModeLegacy;
-        sonicModeLegacy.TabIndex = 7;
+        sonicModeLegacy.TabIndex = 8;
         sonicModeLegacy.CheckedChanged += (_, _) => { if (!loading) UpdateDirty(); };
+        sonicModeSmooth.Text = UiText.SonicModeSmooth;
+        sonicModeSmooth.TabIndex = 6;
+        sonicModeSmooth.Checked = true;
+        sonicModeSmooth.CheckedChanged += (_, _) => { if (!loading) UpdateDirty(); };
+        sonicModes.Controls.Add(sonicModeSmooth);
         sonicModes.Controls.Add(sonicModeNvda);
         sonicModes.Controls.Add(sonicModeLegacy);
         sonicModeGroup.Controls.Add(sonicModes);
@@ -235,9 +249,9 @@ internal sealed class MainForm : Form
             AutoSize = true,
             WrapContents = false
         };
-        Button closeButton = new() { Text = UiText.Close, AutoSize = true, TabIndex = 10 };
-        Button reloadButton = new() { Text = UiText.Reload, AutoSize = true, TabIndex = 9 };
-        Button applyButton = new() { Text = UiText.Apply, AutoSize = true, TabIndex = 8 };
+        Button closeButton = new() { Text = UiText.Close, AutoSize = true, TabIndex = 11 };
+        Button reloadButton = new() { Text = UiText.Reload, AutoSize = true, TabIndex = 10 };
+        Button applyButton = new() { Text = UiText.Apply, AutoSize = true, TabIndex = 9 };
         closeButton.Click += (_, _) => { allowClose = !dirty || Confirm(UiText.ConfirmClose); if (allowClose) Close(); };
         reloadButton.Click += (_, _) => { if (!dirty || Confirm(UiText.ConfirmReload)) LoadData(); };
         applyButton.Click += (_, _) => ApplyChanges();
@@ -250,12 +264,137 @@ internal sealed class MainForm : Form
         statusLabel.Height = 34;
         statusLabel.Dock = DockStyle.Fill;
         statusLabel.AccessibleRole = AccessibleRole.StaticText;
-        statusLabel.TabIndex = 11;
+        statusLabel.TabIndex = 12;
         root.Controls.Add(statusLabel, 0, 6);
 
         AcceptButton = applyButton;
         CancelButton = closeButton;
         Controls.Add(root);
+        BuildSettingsMenu();
+        localizedText.Add(() =>
+        {
+            architecture.Text = UiText.Architecture(registry.ArchitectureName);
+            availableGroup.Text = UiText.AvailableGroup;
+            installedGroup.Text = UiText.InstalledGroup;
+            availableHelp.Text = UiText.AvailableTreeHelp;
+            installedHelp.Text = UiText.InstalledTreeHelp;
+            addButton.Text = UiText.AddSelected;
+            removeButton.Text = UiText.RemoveSelected;
+            inflectionGroup.Text = UiText.InflectionGroup;
+            inflectionLabel.Text = UiText.Inflection;
+            sonicCheck.Text = UiText.Sonic;
+            sonicModeGroup.Text = UiText.SonicModeGroup;
+            sonicModeSmooth.Text = UiText.SonicModeSmooth;
+            sonicModeNvda.Text = UiText.SonicModeNvda;
+            sonicModeLegacy.Text = UiText.SonicModeLegacy;
+            closeButton.Text = UiText.Close;
+            reloadButton.Text = UiText.Reload;
+            applyButton.Text = UiText.Apply;
+        });
+        RefreshInterfacePreferences();
+    }
+
+    private static Label CreateHelpLabel() => new()
+    {
+        AutoSize = true,
+        MaximumSize = new Size(420, 0),
+        AccessibleRole = AccessibleRole.StaticText,
+        TabStop = false,
+        Margin = new Padding(0, 0, 0, 6)
+    };
+
+    private SonicMode SelectedSonicMode => sonicModeSmooth.Checked ? SonicMode.Smooth
+        : sonicModeNvda.Checked ? SonicMode.Nvda : SonicMode.Legacy;
+
+    private void BuildSettingsMenu()
+    {
+        lightThemeItem.Click += (_, _) => SaveInterfacePreferences(preferences with { Theme = AppTheme.Light });
+        darkThemeItem.Click += (_, _) => SaveInterfacePreferences(preferences with { Theme = AppTheme.Dark });
+        systemLanguageItem.Click += (_, _) => SaveInterfacePreferences(preferences with { Language = AppLanguage.System });
+        englishLanguageItem.Click += (_, _) => SaveInterfacePreferences(preferences with { Language = AppLanguage.English });
+        polishLanguageItem.Click += (_, _) => SaveInterfacePreferences(preferences with { Language = AppLanguage.Polish });
+        showHintsItem.Click += (_, _) => SaveInterfacePreferences(preferences with { ShowHints = !preferences.ShowHints });
+        themeMenu.DropDownItems.AddRange(new ToolStripItem[] { lightThemeItem, darkThemeItem });
+        languageMenu.DropDownItems.AddRange(new ToolStripItem[] { systemLanguageItem, englishLanguageItem, polishLanguageItem });
+        settingsMenuItem.DropDownItems.AddRange(new ToolStripItem[] { themeMenu, languageMenu, showHintsItem });
+        settingsMenu.Items.Add(settingsMenuItem);
+        settingsMenu.TabStop = false;
+        MainMenuStrip = settingsMenu;
+        Controls.Add(settingsMenu);
+    }
+
+    private void SaveInterfacePreferences(VarioSettings updatedPreferences)
+    {
+        try
+        {
+            settingsStore.Save(updatedPreferences);
+            preferences = updatedPreferences;
+            RefreshInterfacePreferences();
+            SetStatus(UiText.PreferencesSaved);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(this, UiText.PreferencesSaveFailed(settingsStore.FilePath) +
+                Environment.NewLine + exception.Message, UiText.Warning, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void RefreshInterfacePreferences()
+    {
+        SuspendLayout();
+        try
+        {
+            UiText.SetLanguage(preferences.Language);
+            Text = UiText.Title;
+            foreach (Action updateText in localizedText)
+                updateText();
+            settingsMenu.AccessibleName = UiText.SettingsMenuName;
+            settingsMenuItem.Text = UiText.SettingsMenu;
+            themeMenu.Text = UiText.ThemeMenu;
+            lightThemeItem.Text = UiText.LightTheme;
+            darkThemeItem.Text = UiText.DarkTheme;
+            languageMenu.Text = UiText.LanguageMenu;
+            systemLanguageItem.Text = UiText.SystemLanguage;
+            englishLanguageItem.Text = UiText.EnglishLanguage;
+            polishLanguageItem.Text = UiText.PolishLanguage;
+            showHintsItem.Text = UiText.ShowHints;
+            lightThemeItem.Checked = preferences.Theme == AppTheme.Light;
+            darkThemeItem.Checked = preferences.Theme == AppTheme.Dark;
+            systemLanguageItem.Checked = preferences.Language == AppLanguage.System;
+            englishLanguageItem.Checked = preferences.Language == AppLanguage.English;
+            polishLanguageItem.Checked = preferences.Language == AppLanguage.Polish;
+            showHintsItem.Checked = preferences.ShowHints;
+            availableTree.AccessibleName = UiText.AvailableGroup;
+            installedTree.AccessibleName = UiText.InstalledGroup;
+            availableHelp.Visible = preferences.ShowHints;
+            installedHelp.Visible = preferences.ShowHints;
+            availableTree.ShowNodeToolTips = preferences.ShowHints;
+            installedTree.ShowNodeToolTips = preferences.ShowHints;
+            inflectionValue.AccessibleDescription = preferences.ShowHints ? UiText.InflectionHelp : string.Empty;
+            foreach (TreeNode languageNode in installedTree.Nodes)
+            {
+                languageNode.ToolTipText = preferences.ShowHints ? languageNode.Name : string.Empty;
+                foreach (TreeNode voiceNode in languageNode.Nodes)
+                {
+                    if (voiceNode.Tag is not VoiceNodeData voice || !pendingInflections.TryGetValue(voice.Value, out int value))
+                        continue;
+                    voiceNode.Text = UiText.VoiceWithInflection(voice.Value, value);
+                    voiceNode.ToolTipText = preferences.ShowHints ? UiText.InflectionFor(voice.Value, value) : string.Empty;
+                }
+            }
+            foreach (TreeNode languageNode in availableTree.Nodes)
+            {
+                languageNode.ToolTipText = preferences.ShowHints ? languageNode.Name : string.Empty;
+                foreach (TreeNode voiceNode in languageNode.Nodes)
+                    voiceNode.ToolTipText = preferences.ShowHints ? voiceNode.Name : string.Empty;
+            }
+            UpdateInflectionEditor();
+            Appearance.Apply(this, settingsMenu, preferences.Theme);
+        }
+        finally
+        {
+            ResumeLayout(performLayout: true);
+        }
     }
 
     private void LoadData()
@@ -278,9 +417,12 @@ internal sealed class MainForm : Form
             }
 
             baselineInflections = new Dictionary<string, int>(pendingInflections, StringComparer.OrdinalIgnoreCase);
-            baselineSonic = registry.ReadSonicBoost();
-            baselineSonicMode = registry.ReadSonicMode();
+            preferences = settingsStore.Load().Value;
+            RefreshInterfacePreferences();
+            baselineSonic = preferences.SonicBoost;
+            baselineSonicMode = preferences.SonicMode;
             sonicCheck.Checked = baselineSonic;
+            sonicModeSmooth.Checked = baselineSonicMode == SonicMode.Smooth;
             sonicModeNvda.Checked = baselineSonicMode == SonicMode.Nvda;
             sonicModeLegacy.Checked = baselineSonicMode == SonicMode.Legacy;
             RebuildTrees();
@@ -325,7 +467,7 @@ internal sealed class MainForm : Form
                 if (choices.Count == 0)
                     continue;
 
-                TreeNode languageNode = new(voice) { Name = voice, ToolTipText = voice, StateImageIndex = 0 };
+                TreeNode languageNode = new(voice) { Name = voice, ToolTipText = preferences.ShowHints ? voice : string.Empty, StateImageIndex = 0 };
                 foreach (string choice in choices)
                     languageNode.Nodes.Add(CreateVoiceNode(choice, installed: false));
                 availableTree.Nodes.Add(languageNode);
@@ -350,7 +492,7 @@ internal sealed class MainForm : Form
                 .GroupBy(BaseVoice, StringComparer.OrdinalIgnoreCase)
                 .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase))
             {
-                TreeNode languageNode = new(group.Key) { Name = group.Key, ToolTipText = group.Key, StateImageIndex = 0 };
+                TreeNode languageNode = new(group.Key) { Name = group.Key, ToolTipText = preferences.ShowHints ? group.Key : string.Empty, StateImageIndex = 0 };
                 foreach (string voice in group.OrderBy(value => value, StringComparer.CurrentCultureIgnoreCase))
                     languageNode.Nodes.Add(CreateVoiceNode(voice, installed: true));
                 installedTree.Nodes.Add(languageNode);
@@ -373,7 +515,8 @@ internal sealed class MainForm : Form
         {
             Name = voice,
             Tag = new VoiceNodeData(voice),
-            ToolTipText = installed ? UiText.InflectionFor(voice, pendingInflections[voice]) : voice,
+            ToolTipText = !preferences.ShowHints ? string.Empty
+                : installed ? UiText.InflectionFor(voice, pendingInflections[voice]) : voice,
             StateImageIndex = 0
         };
     }
@@ -489,7 +632,7 @@ internal sealed class MainForm : Form
             return;
         pendingInflections[voice.Value] = value;
         installedTree.SelectedNode.Text = UiText.VoiceWithInflection(voice.Value, value);
-        installedTree.SelectedNode.ToolTipText = UiText.InflectionFor(voice.Value, value);
+        installedTree.SelectedNode.ToolTipText = preferences.ShowHints ? UiText.InflectionFor(voice.Value, value) : string.Empty;
         inflectionVoiceLabel.Text = UiText.InflectionFor(voice.Value, value);
         inflectionValue.AccessibleName = UiText.InflectionFor(voice.Value, value);
         UpdateDirty();
@@ -504,10 +647,17 @@ internal sealed class MainForm : Form
                 .Where(pendingInflections.ContainsKey)
                 .Select(name => new VoiceConfiguration(name, pendingInflections[name]))
                 .ToArray();
-            registry.Apply(voices, sonicCheck.Checked, sonicModeNvda.Checked ? SonicMode.Nvda : SonicMode.Legacy);
+            VarioSettings updatedPreferences = preferences with
+            {
+                SonicBoost = sonicCheck.Checked,
+                SonicMode = SelectedSonicMode
+            };
+            registry.Apply(voices);
+            settingsStore.Save(updatedPreferences);
+            preferences = updatedPreferences;
             baselineInflections = new Dictionary<string, int>(pendingInflections, StringComparer.OrdinalIgnoreCase);
             baselineSonic = sonicCheck.Checked;
-            baselineSonicMode = sonicModeNvda.Checked ? SonicMode.Nvda : SonicMode.Legacy;
+            baselineSonicMode = SelectedSonicMode;
             dirty = false;
             SetStatus(UiText.Saved(voices.Length));
         }
@@ -605,7 +755,7 @@ internal sealed class MainForm : Form
     private void UpdateDirty()
     {
         dirty = sonicCheck.Checked != baselineSonic ||
-            (sonicModeNvda.Checked ? SonicMode.Nvda : SonicMode.Legacy) != baselineSonicMode ||
+            SelectedSonicMode != baselineSonicMode ||
             pendingInflections.Count != baselineInflections.Count ||
             pendingInflections.Any(pair => !baselineInflections.TryGetValue(pair.Key, out int value) || value != pair.Value);
     }

@@ -2,7 +2,16 @@
 
 // SAPI rates are -10..+10; the native engine accepts 80..450 WPM.
 namespace SonicSpeed {
-enum class Mode : int { Legacy = 0, Nvda = 1 };
+enum class Mode : int { Legacy = 0, Nvda = 1, Smooth = 2 };
+constexpr int SmoothThreshold = 300;
+
+inline int SmoothRate(int master, int fragment_adjustment = 0)
+{
+    static const int rates[21] = {80, 95, 110, 124, 142, 159, 180, 208, 240, 270, 300,
+                                  349, 405, 471, 547, 636, 739, 859, 998, 1161, 1350};
+    const long long index = static_cast<long long>(master) + fragment_adjustment + 10;
+    return rates[index < 0 ? 0 : index > 20 ? 20 : static_cast<int>(index)];
+}
 
 inline int Rate(int master, int fragment_adjustment = 0)
 {
@@ -15,6 +24,10 @@ inline int Rate(int master, int fragment_adjustment = 0)
 inline int Target(int master, bool enabled, Mode mode)
 {
     if (!enabled) return 0;
+    if (mode == Mode::Smooth) {
+        const int rate = SmoothRate(master);
+        return rate > SmoothThreshold ? rate : 0;
+    }
     int desired = 0;
     if (mode == Mode::Nvda) {
         desired = Rate(master) * 3;
@@ -29,6 +42,10 @@ inline int Target(int master, bool enabled, Mode mode)
 inline int NativeRate(int master, int fragment_adjustment, bool enabled, Mode mode)
 {
     const int base = Rate(master, fragment_adjustment);
+    if (enabled && mode == Mode::Smooth) {
+        const int rate = SmoothRate(master, fragment_adjustment);
+        return rate > SmoothThreshold ? SmoothThreshold : rate;
+    }
     if (!enabled || mode != Mode::Nvda) return base;
     const int tripled = base * 3;
     return tripled > 450 ? 450 : tripled;
