@@ -130,6 +130,7 @@
 		ę	(t	En
 		ę	(c	En
 		ę	(d	En
+		ęć	(dzie	En^
 		ę	(dzi	En^
 		ę	(ci	En^
 		ę	(ć	En^
@@ -518,6 +519,7 @@
 
 .group	 ś
 		ś		S;
+		ść	(dzie	Z;
 
 .group	 t
 		t		t

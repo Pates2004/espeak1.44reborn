@@ -44,16 +44,16 @@ _17		S;EdEmn'aS;ts;E
 _18		OS;Emn'aS;ts;E
 _19		dz;Ev;Etn'aS;ts;E
 _2X		dvadz;'ES;ts;a
-_3X		t|Sydz;'ES;ts;i
-_4X		tStERdz;'ES;ts;i
-_5X		p;En^ts;dz;'ES;Ont
-_6X		SES;ts;dz;'ES;Ont
+_3X		t|Sydz;'ES;c;i
+_4X		tStERdz;'ES;c;i
+_5X		p;En^dz;'ES;Ont
+_6X		SEZ;dz;'ES;Ont
 _7X		S;EdEmdz;'ES;Ont
 _8X		OS;Emdz;'ES;Ont
-_9X		dz;Ev;En^ts;dz;'ES;Ont
+_9X		dz;Ev;En^dz;'ES;Ont
 
 _1C		st'O
-_2C		dv;'ES;ts;E
+_2C		dv;'ES;c;E
 _3C		t|S'ysta
 _4C		tSt'ERysta
 _5C		p;'En^ts;sEt
@@ -95,29 +95,32 @@ _0M10		kf,intylj'Onuf
 
 _dpt		_pSEts;'inEk_
 
-_cap d'uZE_
+// Keep composed character descriptions separate from the base-letter name.
+_cap d'uZE||_:
 _?A  litERa
 _??  symbOl
 _#9  tab
 _#32 spatsja
-_ 	sp'atsja||n^;,EROzdz;El'ajStsa	// U+00A0 no-break space
+_ 	sp'atsja||_:n^;,EROzdz;,Elaj'Ontsa	// U+00A0 no-break space
 
 // accent names
-_lig	ligat'uRa
-_acu	_'OstRE
-_ac2	x,uNgaR'umlawt // pOdv'ujnE_'OstRE	
-_brv	bR'Evis
-_ced	z|tsEd;'ilO~
-_cir	z|d'aSc;Em	//pSEts;'ONgwE
-_dia	_'umlawt
-_dot	z|kROpkO~
-_grv	ts;'E~Sc;E
-_hac	h'atSEk
-_mcn	nadkRES;l'OnE //m'akROn
-_ogo	z|Og'Onc;Em
-_rng	z|k'uwc;Em	//k'OwO
-_stk	skRES;l'OnE // dz;ElOnE
-_tld	z|t'yldO~
+_lig	ligat'uRa||_:
+_acu	||_:'OstRE
+_ac2	||_:x,uNgaR'umlawt // pOdv'ujnE_'OstRE
+_brv	||_:bR'Evis
+// Separate the base letter from its description, but keep prepositional
+// phrases connected so Polish regressive voicing still applies.
+_ced	_:z||tsEd;'ilO~
+_cir	_:z||d'aSk;Em	//pSEts;'ONgwE
+_dia	||_:'umlawt
+_dot	_:z||kR'OpkO~
+_grv	||_:ts;'E~Sc;E
+_hac	||_:h'atSEk
+_mcn	||_:nadkRES;l'OnE //m'akROn
+_ogo	_:z||Og'ONk;Em
+_rng	_:z||k'uwk;Em	//k'OwO
+_stk	||_:skRES;l'OnE // dz;ElOnE
+_tld	_:z||t'yldO~
 
 
 w	vy  $u $atend
@@ -166,56 +169,58 @@ _>	w;'ENkSE
 _"	tsudz'yswuf
 _,	pSEts;'inEk
 _-	m'yS;lnik		// or minus?
-_?	zn,ak||zapyt'an^a
+// Internal word boundaries retain individual stresses. A short, speed-scaled
+// pause separates content words in names only, not ordinary Polish prose.
+_?	zn'ak||_:z,apyt'an^;a
 __	pOtkR'ES;latS
 _:	dvukR'OpEk
 _;	S;R'Edn^ik
-_(	l'Evy||n,av;as||OkR'ONgwy
-_)	pR'avy||n,av;as||OkR'ONgwy
-_[	l'Evy||n,av;as||kvadRat'Ovy
-_]	pR'avy||n,av;as||kvadRat'Ovy
-_{	l'Evy||n,av;as||klamR'Ovy
-_}	pR'avy||n,av;as||klamR'Ovy
+_(	l'Evy||_:n'av;a#s||_:OkR'ONgwy
+_)	pR'avy||_:n'av;a#s||_:OkR'ONgwy
+_[	l'Evy||_:n'av;a#s||_:kf,adRat'Ovy
+_]	pR'avy||_:n'av;a#s||_:kf,adRat'Ovy
+_{	l'Evy||_:n'av;a#s||_:klamR'Ovy
+_}	pR'avy||_:n'av;a#s||_:klamR'Ovy
 _'	ap'OstROf
-_|	p;On'Ova||kR'Eska
+_|	p;On'Ova||_:kR'Eska
 
 // Unicode punctuation previously borrowed from the English dictionary
-_¦	pS,ERyv'ana||p;On'Ova||kR'Eska
-_ª	symbOl||Z'En^ski
-_·	kR'Opka||ROtk'Ova
-_º	symbOl||m'E~ski
-_‐	wStSn^'ik
-_‑	wStSn^'ik||n^;,EROzdz;El'ajStsy
-_‒	p'awza||tsyfR'Ova
+_¦	pS,ERyv'ana||_:p;On'Ova||_:kR'Eska
+_ª	s'ymbOl||_:Z'En^ski
+_·	kR'Opka||_:S;ROtk'Ova
+_º	s'ymbOl||_:m'E~ski
+_‐	w'OntSn^ik
+_‑	w'OntSn^ik||_:n^;,EROzdz;,Elaj'Ontsy
+_‒	p'awza||_:tsyfR'Ova
 _–	pup'awza
 _—	p'awza
-_―	kR'Eska||pOZ;'Oma
-_‖	pOdv'ujna||p;On'Ova||kR'Eska
-_‘	l'Evy||tsudz'yswuf||p,OjEd'yntSy
-_’	pR'avy||tsudz'yswuf||p,OjEd'yntSy
-_‚	d'Olny||tsudz'yswuf||p,OjEd'yntSy
-_‛	,OdvRuts'Ony||tsudz'yswuf||p,OjEd'yntSy
-_“	l'Evy||tsudz'yswuf||pOdv'ujny
-_”	pR'avy||tsudz'yswuf||pOdv'ujny
-_„	d'Olny||tsudz'yswuf||pOdv'ujny
-_‟	,OdvRuts'Ony||tsudz'yswuf||pOdv'ujny
+_―	kR'Eska||_:pOZ;'Oma
+_‖	pOdv'ujna||_:p;On'Ova||_:kR'Eska
+_‘	l'Evy||_:tsudz'yswuf||_:p,OjEd'yntSy
+_’	pR'avy||_:tsudz'yswuf||_:p,OjEd'yntSy
+_‚	d'Olny||_:tsudz'yswuf||_:p,OjEd'yntSy
+_‛	,OdvRuts'Ony||_:tsudz'yswuf||_:p,OjEd'yntSy
+_“	l'Evy||_:tsudz'yswuf||_:pOdv'ujny
+_”	pR'avy||_:tsudz'yswuf||_:pOdv'ujny
+_„	d'Olny||_:tsudz'yswuf||_:pOdv'ujny
+_‟	,OdvRuts'Ony||_:tsudz'yswuf||_:pOdv'ujny
 _†	kS'yZyk
-_‡	pOdv'ujny||kS'yZyk
+_‡	pOdv'ujny||_:kS'yZyk
 _•	p'uNktOR
-_‣	tR'ujkStny||p'uNktOR
+_‣	tRujk'Ontny||_:p'uNktOR
 _․	kR'Opka
-_‥	dv;'E||kR'Opki
+_‥	dv;'E||_:kR'Opki
 _…	v;,ElOkR'OpEk
 _‰	pR'Omil
 _′	pR'im
-_″	pOdv'ujny||pR'im
-_‴	pOtR'ujny||pR'im
-_‼	pOdv'ujny||vykS'ykn^ik
-_₠	zn,ag||val'uty||'EwRO
+_″	pOdv'ujny||_:pR'im
+_‴	pOtR'ujny||_:pR'im
+_‼	pOdv'ujny||_:vykS'ykn^ik
+_₠	zn'ak||_:val'uty||_:'EwRO
 
 .	kR'Opka	$max3
 ~	t'ylda
-=	R'uvna||S;E	$max3
+=	R'uvna||_:S;E	$max3
 /	sl'ES	$max3
 *	gv;'astka	$max3
 \	b'EkslES	$max3
@@ -236,32 +241,32 @@ _$	d'OlaR
 ¨	'umlawt
 °	st'Op;En^
 ˛	Og'OnEk
-´	,OstRy_'aktsEnt
+´	'OstRy||_:'aktsEnt
 ˇ	k'aROn
 ¸	tsEd;'illa
 ˝	x,uNgaR'umlawt
 ×	R'azy
 ÷	dz;El'En^;E
-˙	g'uRna_kR'Opka
+˙	g'uRna||_:kR'Opka
 ¯	nadkRES;l'En^E
-²	kv'adRat
+²	kf'adRat
 ³	S'ES;tS;an
-¼	jEdnatSf'aRta
-½	jEdnadR'uga
-¾	t||SytSf'aRtE
-¹	jEdEng'uRnE
-™	zn,ak||tOvaR'Ovy
-±	plusm'inus
+¼	j'Edna||_:tSf'aRta
+½	j'Edna||_:dR'uga
+¾	t|S'y||_:tSf'aRtE
+¹	j'EdEn||_:g'uRnE
+™	zn'ak||_:t,OvaR'Ovy
+±	pl'us||_:m'inus
 £	funt
 ®	zastSEZ'Ony
-¡	OdvR,Otny||vykS'ykn^ik
+¡	OdvR'Otny||_:vykS'ykn^ik
 ¢	tsEnt
 ¥	jEn
-«	fRants,usci||tsudz'yswuf
+«	fRants'uski||_:tsudz'yswuf
 ¬	nEg'atsja
-»	pR'avy||fRants,usci||tsudz'yswuf
+»	pR'avy||_:fRants'uski||_:tsudz'yswuf
 ¶	ak'apit
-¿	OdvR,Otny||pytajn^ik
+¿	OdvR'Otny||_:pyt'ajn^ik
 
 
 
@@ -3235,8 +3240,8 @@ _ę	E~
 _ł	w'y
 ń	n^'i
 _ń	n^'i
-ó	u||_z,amkn^'EntE
-_ó	u||_z,amkn^'EntE
+ó	'u||_:zamkn^;'EntE
+_ó	'u||_:zamkn^;'EntE
 ś	S;'i
 _ś	S;'i
 ź	Z;'i

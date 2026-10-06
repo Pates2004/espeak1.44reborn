@@ -1,4 +1,4 @@
-eSpeak 1.44.05 r30 - Windows 32-bit (x86)
+eSpeak 1.44.05 r33 - Windows 32-bit (x86)
 ====================================
 
 English
@@ -41,10 +41,19 @@ is reported instead of silently choosing another configuration location.
 All 104 bundled variants are listed under espeak-data\voices\!v. Voice names
 can include a variant, for example pl+f3. The catalog comes from eSpeak NG 1.52.0;
 the synthesis core remains the maintained classic eSpeak 1.44.05.
-The r30 Polish dictionary retains the consonant in pierwsz- and fuller number
-clusters including sześćset, pięćdziesiąt, sześćdziesiąt and dziewięćdziesiąt.
-Normal Polish voicing assimilation remains. Fuller clusters are a requested
-pronunciation preference, not a statement that accepted reductions are wrong.
+The r33 dictionary update corrects kwadratowy in Polish square-bracket names
+and improves separation in existing multiword character and symbol names,
+including u zamknięte. Ordinary text spacing and engine behavior are unchanged.
+The earlier r32 dictionary update restored the user-selected BOY pronunciations
+for numeric 30, 40 and 200, including these components in larger numbers.
+Written trzydzieści, czterdzieści and dwieście retain their existing Polish ć;
+digits and written words intentionally differ. Numeric 300 and trzysta are
+unchanged. Primary stress is not moved.
+The standard reductions in pięćdziesiąt, sześćdziesiąt, dziewięćdziesiąt and
+their families remain as in BOY. The careful pierwsz- family retains f.
+The fuller sześćset/600 pronunciation retains ć as an explicit user preference,
+not a claim of conformity with the standard. Tarzan and kolaż are unchanged.
+Existing engine, Sonic and Vario functionality is preserved in this release.
 
 Command-line help: docs\commands.html. Source and license: License.txt (GPLv3).
 
@@ -88,10 +97,19 @@ zapisu powoduje komunikat, a nie cichą zmianę lokalizacji konfiguracji.
 
 Katalog espeak-data\voices\!v zawiera 104 warianty. Wariant można dopisać do
 nazwy głosu, np. pl+f3. Zestaw pochodzi z eSpeak NG 1.52.0, ale sam silnik
-pozostaje rozwijaną wersją klasycznego eSpeak 1.44.05. Słownik r30 zachowuje
-spółgłoskę w rodzinie pierwsz- i pełniejsze zbitki w liczebnikach sześćset,
-pięćdziesiąt, sześćdziesiąt oraz dziewięćdziesiąt. Zwykłe upodobnienia polskie
-pozostają. Pełniejsza wymowa jest wybraną preferencją, a nie negowaniem
-poprawności dopuszczalnych uproszczeń językowych.
+pozostaje rozwijaną wersją klasycznego eSpeak 1.44.05.
+Słownik r33 poprawia kwadratowy w polskich nazwach nawiasów kwadratowych oraz
+rozdzielenie słów w istniejących wielowyrazowych nazwach liter i symboli,
+w tym u zamknięte. Odstępy w zwykłym tekście i działanie silnika są bez zmian.
+Wcześniejsza aktualizacja słownika r32 przywróciła
+wybrane przez użytkownika starsze brzmienie z BOY dla cyfr 30, 40 i 200,
+także jako składników większych liczb. Słowa trzydzieści, czterdzieści i dwieście
+zachowują dotychczasowe polskie ć: cyfry i słowa celowo brzmią inaczej.
+Liczba 300 i słowo trzysta pozostają bez zmian. Nie przesunięto głównego akcentu.
+Uproszczenia w pięćdziesiąt, sześćdziesiąt, dziewięćdziesiąt i ich rodzinach
+pozostają takie jak w BOY. Staranna wymowa rodziny pierwsz- zachowuje f.
+Pełniejsza wymowa sześćset/600 zachowuje ć zgodnie z wyraźną preferencją
+użytkownika, a nie jako deklarację zgodności z normą. Tarzan i kolaż są bez zmian.
+Wydanie zachowuje dotychczasowe funkcje silnika, Sonica i Vario.
 
 Pomoc konsolowa: docs\commands.html. Licencja: License.txt (GPLv3).

@@ -1,0 +1,18 @@
+Key	Character	Mode	OriginalPhonemes	ExpectedPhonemes	ExpectedTrace
+_acu	á	characters	_'OstRE	||_:'OstRE	,a_| _:'OstRE_|_!
+_acu	í	characters	_'OstRE	||_:'OstRE	,i_| _:'OstRE_|_!
+_ac2	""	source_only	x,uNgaR'umlawt	||_:x,uNgaR'umlawt	""
+_brv	ĕ	characters	bR'Evis	||_:bR'Evis	,E_| _:bR'Evis_|_!
+_brv	ŏ	characters	bR'Evis	||_:bR'Evis	,O_| _:bR'Evis_|_!
+_dia	ä	characters	_'umlawt	||_:'umlawt	,a_| _:'umla#wt_|_!
+_grv	à	characters	ts;'E~Sc;E	||_:ts;'E~Sc;E	,a_| _:ts;'E~Sc;E_|_!
+_hac	č	characters	h'atSEk	||_:h'atSEk	ts,E_| _:h'atSEk_|_!
+_mcn	ā	characters	nadkRES;l'OnE	||_:nadkRES;l'OnE	,a_| _:natkRES;l'OnE_|_!
+_stk	ø	characters	skRES;l'OnE	||_:skRES;l'OnE	,O_| _:skRES;l'OnE_|_!
+_cap	A	tts:char	d'uZE_	d'uZE||_:	d'uZE _:'a_!
+_cap	Á	tts:char	d'uZE_	d'uZE||_:	d'uZE _:,a_| _:'OstRE_|_!
+_cap	Č	tts:char	d'uZE_	d'uZE||_:	d'uZE _:ts,E_| _:h'atSEk_|_!
+_cap	Ç	tts:char	d'uZE_	d'uZE||_:	d'uZE _:ts,E_|_:s tsEd;'ilO~_|_!
+_cap	Æ	tts:char	d'uZE_	d'uZE||_:	d'uZE _:l,igat'uRa _:_|a'E_!
+_lig	æ	characters	ligat'uRa	ligat'uRa||_:	l,igat'uRa _:_|a'E_!
+_lig	œ	characters	ligat'uRa	ligat'uRa||_:	l,igat'uRa _:_|O'E_!

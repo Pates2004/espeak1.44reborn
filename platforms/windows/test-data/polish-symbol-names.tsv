@@ -1,0 +1,56 @@
+Key	Text	Kind	OriginalPhonemes	ExpectedPhonemes	ExpectedTrace
+_ 	spacja nierozdzielająca	punctuation	sp'atsja||n^;,EROzdz;El'ajStsa	sp'atsja||_:n^;,EROzdz;,Elaj'Ontsa	""
+_ced	z cedillą	accent	z|tsEd;'ilO~	_:z||tsEd;'ilO~	ts,E_|_:s tsEd;'ilO~_|_!
+_cir	z daszkiem	accent	z|d'aSc;Em	_:z||d'aSk;Em	,a_|_:z d'aSk;Em_|_!
+_dot	z kropką	accent	z|kROpkO~	_:z||kR'OpkO~	ts,E_|_:s kR'OpkO~_|_!
+_ogo	z ogonkiem	accent	z|Og'Onc;Em	_:z||Og'ONk;Em	,i_|_:z Og'ONk;Em_|_!
+_rng	z kółkiem	accent	z|k'uwc;Em	_:z||k'uwk;Em	,a_|_:s k'uwk;Em_|_!
+_tld	z tyldą	accent	z|t'yldO~	_:z||t'yldO~	,a_|_:s t'yldO~_|_!
+_?	znak zapytania	punctuation	zn,ak||zapyt'an^a	zn'ak||_:z,apyt'an^;a	zn'ak _:z,apyt'an^;a
+_(	lewy nawias okrągły	punctuation	l'Evy||n,av;as||OkR'ONgwy	l'Evy||_:n'av;a#s||_:OkR'ONgwy	l'Evy _:n'av;a#s _:OkR'ONgwy
+_)	prawy nawias okrągły	punctuation	pR'avy||n,av;as||OkR'ONgwy	pR'avy||_:n'av;a#s||_:OkR'ONgwy	pR'avy _:n'av;a#s _:OkR'ONgwy
+_[	lewy nawias kwadratowy	punctuation	l'Evy||n,av;as||kvadRat'Ovy	l'Evy||_:n'av;a#s||_:kf,adRat'Ovy	l'Evy _:n'av;a#s _:kf,adRat'Ovy
+_]	prawy nawias kwadratowy	punctuation	pR'avy||n,av;as||kvadRat'Ovy	pR'avy||_:n'av;a#s||_:kf,adRat'Ovy	pR'avy _:n'av;a#s _:kf,adRat'Ovy
+_{	lewy nawias klamrowy	punctuation	l'Evy||n,av;as||klamR'Ovy	l'Evy||_:n'av;a#s||_:klamR'Ovy	l'Evy _:n'av;a#s _:klamR'Ovy
+_}	prawy nawias klamrowy	punctuation	pR'avy||n,av;as||klamR'Ovy	pR'avy||_:n'av;a#s||_:klamR'Ovy	pR'avy _:n'av;a#s _:klamR'Ovy
+_|	pionowa kreska	punctuation	p;On'Ova||kR'Eska	p;On'Ova||_:kR'Eska	p;On'Ova _:kR'Eska
+_¦	przerywana pionowa kreska	punctuation	pS,ERyv'ana||p;On'Ova||kR'Eska	pS,ERyv'ana||_:p;On'Ova||_:kR'Eska	pS,ERyv'ana _:p;On'Ova _:kR'Eska
+_ª	symbol żeński	punctuation	symbOl||Z'En^ski	s'ymbOl||_:Z'En^ski	s'ymbOl _:Z'En^ski
+_·	kropka środkowa	punctuation	kR'Opka||ROtk'Ova	kR'Opka||_:S;ROtk'Ova	kR'Opka _:S;ROtk'Ova
+_º	symbol męski	punctuation	symbOl||m'E~ski	s'ymbOl||_:m'E~ski	s'ymbOl _:m'E~ski
+_‐	łącznik	punctuation	wStSn^'ik	w'OntSn^ik	w'OntSn^ik
+_‑	łącznik nierozdzielający	punctuation	wStSn^'ik||n^;,EROzdz;El'ajStsy	w'OntSn^ik||_:n^;,EROzdz;,Elaj'Ontsy	w'OntSn^ik _:n^;,EROzdz;,Elaj'Ontsy
+_‒	pauza cyfrowa	punctuation	p'awza||tsyfR'Ova	p'awza||_:tsyfR'Ova	p'awza _:tsyfR'Ova
+_―	kreska pozioma	punctuation	kR'Eska||pOZ;'Oma	kR'Eska||_:pOZ;'Oma	kR'Eska _:pOZ;'Oma
+_‖	podwójna pionowa kreska	punctuation	pOdv'ujna||p;On'Ova||kR'Eska	pOdv'ujna||_:p;On'Ova||_:kR'Eska	pOdv'ujna _:p;On'Ova _:kR'Eska
+_‘	lewy cudzysłów pojedynczy	punctuation	l'Evy||tsudz'yswuf||p,OjEd'yntSy	l'Evy||_:tsudz'yswuf||_:p,OjEd'yntSy	l'Evy _:tsudz'yswuf _:p,OjEd'yntSy
+_’	prawy cudzysłów pojedynczy	punctuation	pR'avy||tsudz'yswuf||p,OjEd'yntSy	pR'avy||_:tsudz'yswuf||_:p,OjEd'yntSy	pR'avy _:tsudz'yswuf _:p,OjEd'yntSy
+_‚	dolny cudzysłów pojedynczy	punctuation	d'Olny||tsudz'yswuf||p,OjEd'yntSy	d'Olny||_:tsudz'yswuf||_:p,OjEd'yntSy	d'Olny _:tsudz'yswuf _:p,OjEd'yntSy
+_‛	odwrócony cudzysłów pojedynczy	punctuation	,OdvRuts'Ony||tsudz'yswuf||p,OjEd'yntSy	,OdvRuts'Ony||_:tsudz'yswuf||_:p,OjEd'yntSy	,OdvRuts'Ony _:tsudz'yswuf _:p,OjEd'yntSy
+_“	lewy cudzysłów podwójny	punctuation	l'Evy||tsudz'yswuf||pOdv'ujny	l'Evy||_:tsudz'yswuf||_:pOdv'ujny	l'Evy _:tsudz'yswuf _:pOdv'ujny
+_”	prawy cudzysłów podwójny	punctuation	pR'avy||tsudz'yswuf||pOdv'ujny	pR'avy||_:tsudz'yswuf||_:pOdv'ujny	pR'avy _:tsudz'yswuf _:pOdv'ujny
+_„	dolny cudzysłów podwójny	punctuation	d'Olny||tsudz'yswuf||pOdv'ujny	d'Olny||_:tsudz'yswuf||_:pOdv'ujny	d'Olny _:tsudz'yswuf _:pOdv'ujny
+_‟	odwrócony cudzysłów podwójny	punctuation	,OdvRuts'Ony||tsudz'yswuf||pOdv'ujny	,OdvRuts'Ony||_:tsudz'yswuf||_:pOdv'ujny	,OdvRuts'Ony _:tsudz'yswuf _:pOdv'ujny
+_‡	podwójny krzyżyk	punctuation	pOdv'ujny||kS'yZyk	pOdv'ujny||_:kS'yZyk	pOdv'ujny _:kS'yZyk
+_‣	trójkątny punktor	punctuation	tR'ujkStny||p'uNktOR	tRujk'Ontny||_:p'uNktOR	tRujk'Ontny _:p'uNktOR
+_‥	dwie kropki	punctuation	dv;'E||kR'Opki	dv;'E||_:kR'Opki	dv;'E _:kR'Opki
+_″	podwójny prim	punctuation	pOdv'ujny||pR'im	pOdv'ujny||_:pR'im	pOdv'ujny _:pR'im
+_‴	potrójny prim	punctuation	pOtR'ujny||pR'im	pOtR'ujny||_:pR'im	pOtR'ujny _:pR'im
+_‼	podwójny wykrzyknik	punctuation	pOdv'ujny||vykS'ykn^ik	pOdv'ujny||_:vykS'ykn^ik	pOdv'ujny _:vykS'ykn^ik
+_₠	znak waluty euro	punctuation	zn,ag||val'uty||'EwRO	zn'ak||_:val'uty||_:'EwRO	zn'ak _:val'uty _:'EwRO_!
+=	równa się	direct	R'uvna||S;E	R'uvna||_:S;E	R'uvna _:S;,E
+´	ostry akcent	direct	,OstRy_'aktsEnt	'OstRy||_:'aktsEnt	'OstRy _:'aktsEnt_!
+˙	górna kropka	direct	g'uRna_kR'Opka	g'uRna||_:kR'Opka	g'uRna _:kR'Opka
+²	kwadrat	direct	kv'adRat	kf'adRat	kf'adRat
+¼	jedna czwarta	direct	jEdnatSf'aRta	j'Edna||_:tSf'aRta	j'Edna _:tSf'aRta
+½	jedna druga	direct	jEdnadR'uga	j'Edna||_:dR'uga	j'Edna _:dR'uga
+¾	trzy czwarte	direct	t||SytSf'aRtE	t|S'y||_:tSf'aRtE	tS'y _:tSf'aRtE
+¹	jeden górne	direct	jEdEng'uRnE	j'EdEn||_:g'uRnE	j'EdEn _:g'uRnE
+™	znak towarowy	direct	zn,ak||tOvaR'Ovy	zn'ak||_:t,OvaR'Ovy	zn'ak _:t,OvaR'Ovy
+±	plus minus	direct	plusm'inus	pl'us||_:m'inus	pl'us _:m'inus
+¡	odwrotny wykrzyknik	direct	OdvR,Otny||vykS'ykn^ik	OdvR'Otny||_:vykS'ykn^ik	OdvR'Otny _:vykS'ykn^ik
+«	francuski cudzysłów	direct	fRants,usci||tsudz'yswuf	fRants'uski||_:tsudz'yswuf	fRants'uski _:tsudz'yswuf
+»	prawy francuski cudzysłów	direct	pR'avy||fRants,usci||tsudz'yswuf	pR'avy||_:fRants'uski||_:tsudz'yswuf	pR'avy _:fRants'uski _:tsudz'yswuf
+¿	odwrotny pytajnik	direct	OdvR,Otny||pytajn^ik	OdvR'Otny||_:pyt'ajn^ik	OdvR'Otny _:pyt'ajn^ik
+ó	u zamknięte	direct	u||_z,amkn^'EntE	'u||_:zamkn^;'EntE	'u _:zamkn^;'EntE
+_ó	u zamknięte	direct	u||_z,amkn^'EntE	'u||_:zamkn^;'EntE	'u _:zamkn^;'EntE_!
