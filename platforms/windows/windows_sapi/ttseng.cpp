@@ -31,7 +31,15 @@ namespace {
 class TtsClassFactory final : public IClassFactory
 {
 public:
-    TtsClassFactory() : ref_count_(1) {}
+    TtsClassFactory() : ref_count_(1)
+    {
+        InterlockedIncrement(&g_module_object_count);
+    }
+
+    ~TtsClassFactory()
+    {
+        InterlockedDecrement(&g_module_object_count);
+    }
 
     STDMETHOD(QueryInterface)(REFIID riid, void** ppvObject) override
     {
@@ -156,7 +164,24 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID)
 
 STDAPI DllCanUnloadNow(void)
 {
-    return (g_module_object_count == 0 && g_server_lock_count == 0) ? S_OK : S_FALSE;
+    // COM calls this outside the loader lock. Keep cached shared data while any
+    // engine or factory is alive; never tear it down from an object destructor.
+    if (InterlockedCompareExchange(&g_module_object_count, 0, 0) != 0 ||
+        InterlockedCompareExchange(&g_server_lock_count, 0, 0) != 0)
+        return S_FALSE;
+
+    LockSapiEngine();
+    if (InterlockedCompareExchange(&g_module_object_count, 0, 0) == 0 &&
+        InterlockedCompareExchange(&g_server_lock_count, 0, 0) == 0)
+        CleanupSapiEngine();
+    // A newly created object cannot initialize/use the core until this lock
+    // is released, but its reference can already prevent unloading.
+    const HRESULT result =
+        (InterlockedCompareExchange(&g_module_object_count, 0, 0) == 0 &&
+         InterlockedCompareExchange(&g_server_lock_count, 0, 0) == 0)
+        ? S_OK : S_FALSE;
+    UnlockSapiEngine();
+    return result;
 }
 
 STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppvObject)

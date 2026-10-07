@@ -1,5 +1,13 @@
-eSpeak 1.44.05 r33 - Windows 32-bit (x86)
+eSpeak 1.44.05 r34 - Windows 32-bit (x86)
 ====================================
+
+r34: Safe shared SAPI/core teardown and reinitialization; dynamic voice catalogs
+remove the old 150-entry overflow without dropping languages or variants.
+Dictionary data, Vario UI and speed settings are unchanged.
+
+r34: Bezpieczne zwalnianie wspólnych zasobów SAPI/rdzenia i ponowna inicjalizacja.
+Dynamiczny katalog usuwa przepełnienie dawnej tablicy 150 głosów, bez obcinania
+języków ani wariantów. Słowniki, interfejs Vario i szybkość pozostają bez zmian.
 
 English
 -------

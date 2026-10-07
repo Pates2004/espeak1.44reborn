@@ -612,6 +612,7 @@ extern int (* phoneme_callback)(const char *);
 extern void SetLengthMods(Translator *tr, int value);
 
 void LoadConfig(void);
+void FreeSoundIcons(void);
 int TransposeAlphabet(Translator *tr, char *text);
 int utf8_in(int *c, const char *buf);
 int utf8_in2(int *c, const char *buf, int backwards);
@@ -633,6 +634,7 @@ void GetTranslatedPhonemeString(char *phon_out, int n_phon_out);
 Translator *SelectTranslator(const char *name);
 int SetTranslator2(const char *name);
 void DeleteTranslator(Translator *tr);
+void FreeTranslators(void);
 int Lookup(Translator *tr, const char *word, char *ph_out);
 int LookupFlags(Translator *tr, const char *word);
 

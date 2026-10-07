@@ -35,7 +35,7 @@
 #include "translate.h"
 #include "wave.h"
 
-const char *version_string = "1.44.05-r28 Windows x86";
+const char *version_string = "1.44.05-r34 Windows x86";
 const int version_phdata  = 0x014404;
 
 int option_device_number = -1;
@@ -97,6 +97,7 @@ static char *ReadPhFile(void *ptr, const char *fname, int *size)
 	}
 	if(fread(p,1,length,f_in) != length)
 	{
+		Free(p);
 		fclose(f_in);
 		return(NULL);
 	}
@@ -172,9 +173,19 @@ void FreePhData(void)
 	Free(phoneme_tab_data);
 	Free(phoneme_index);
 	Free(phondata_ptr);
+	Free(tunes);
 	phoneme_tab_data=NULL;
 	phoneme_index=NULL;
 	phondata_ptr=NULL;
+	tunes=NULL;
+	n_tunes=0;
+	wavefile_data=NULL;
+	n_phoneme_tables=0;
+	n_phoneme_tab=0;
+	current_phoneme_table=0;
+	phoneme_tab_number=0;
+	memset(phoneme_tab,0,sizeof(phoneme_tab));
+	memset(phoneme_tab_list,0,sizeof(phoneme_tab_list));
 }
 
 
@@ -455,6 +466,18 @@ int SelectPhonemeTableName(const char *name)
 
 
 
+void FreeSoundIcons(void)
+{
+	for(int ix=0; ix<N_SOUNDICON_TAB; ix++)
+	{
+		free(soundicon_tab[ix].filename);
+		free(soundicon_tab[ix].data);
+	}
+	memset(soundicon_tab,0,sizeof(soundicon_tab));
+	n_soundicon_tab = N_SOUNDICON_SLOTS;
+}
+
+
 void LoadConfig(void)
 {//==================
 // Load configuration file, if one exists
@@ -468,11 +491,7 @@ void LoadConfig(void)
 
 	logging_type = 0;
 
-	for(ix=0; ix<N_SOUNDICON_SLOTS; ix++)
-	{
-		soundicon_tab[ix].filename = NULL;
-		soundicon_tab[ix].data = NULL;
-	}
+	FreeSoundIcons();
 
 	sprintf(buf,"%s%c%s",path_home,PATHSEP,"config");
 	if((f = fopen(buf,"r"))==NULL)
@@ -519,6 +538,7 @@ void LoadConfig(void)
 			}
 		}
 	}
+	fclose(f);
 }  //  end of LoadConfig
 
 

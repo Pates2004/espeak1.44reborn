@@ -552,6 +552,7 @@ int MbrolaTranslate(PHONEME_LIST *plist, int n_phonemes, int resume, FILE *f_mbr
 int MbrolaGenerate(PHONEME_LIST *phoneme_list, int *n_ph, int resume);
 int MbrolaFill(int length, int resume);
 void MbrolaReset(void);
+void MbrolaTerminate(void);
 void DoEmbedded(int *embix, int sourceix);
 void DoMarker(int type, int char_posn, int length, int value);
 //int DoSample(PHONEME_TAB *ph1, PHONEME_TAB *ph2, int which, int length_mod, int amp);

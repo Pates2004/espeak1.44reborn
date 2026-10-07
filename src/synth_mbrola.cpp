@@ -109,6 +109,29 @@ void unload_MBR()
 
 static MBROLA_TAB *mbrola_tab = NULL;
 static int mbrola_control = 0;
+static bool mbrola_initialized = false;
+
+static void CloseMbrolaVoice(void)
+{
+	if(mbrola_initialized)
+	{
+		close_MBR();
+		mbrola_initialized = false;
+	}
+}
+
+void MbrolaTerminate(void)
+{
+	CloseMbrolaVoice();
+	free(mbrola_tab);
+	mbrola_tab = NULL;
+	mbrola_control = 0;
+	mbrola_name[0] = 0;
+	mbrola_delay = 0;
+#ifdef PLATFORM_WINDOWS
+	unload_MBR();
+#endif
+}
 
 
 espeak_ERROR LoadMbrolaTable(const char *mbrola_voice, const char *phtrans, int srate)
@@ -152,6 +175,7 @@ espeak_ERROR LoadMbrolaTable(const char *mbrola_voice, const char *phtrans, int 
 
 	if(init_MBR(path) != 0)      // initialise the required mbrola voice
 		return(EE_NOT_FOUND);
+	mbrola_initialized = true;
 
 	setNoError_MBR(1);     // don't stop on phoneme errors
 
@@ -160,11 +184,11 @@ espeak_ERROR LoadMbrolaTable(const char *mbrola_voice, const char *phtrans, int 
 	size = GetFileLength(path);
 	if(size < 4)
 	{
-		close_MBR();
+		CloseMbrolaVoice();
 		return(EE_NOT_FOUND);
 	}
 	if((f_in = fopen(path,"rb")) == NULL) {
-		close_MBR();	
+		CloseMbrolaVoice();
 		return(EE_NOT_FOUND);
 	}
 
@@ -172,7 +196,7 @@ espeak_ERROR LoadMbrolaTable(const char *mbrola_voice, const char *phtrans, int 
 	if(new_mbrola_tab == NULL)
 	{
 		fclose(f_in);
-		close_MBR();	
+		CloseMbrolaVoice();
 		return(EE_INTERNAL_ERROR);
 	}
 	mbrola_tab = new_mbrola_tab;
@@ -678,6 +702,10 @@ int MbrolaFill(int length, int resume)
 }
 
 void MbrolaReset(void)
+{
+}
+
+void MbrolaTerminate(void)
 {
 }
 

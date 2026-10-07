@@ -1,15 +1,29 @@
-# eSpeak 1.44.05 Reborn — r33 (32-bit)
+# eSpeak 1.44.05 Reborn — r34 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r33 project:
+eSpeak r34 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r33` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r34` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
+
+## Release r34 / Wydanie r34
+
+This maintenance release safely releases shared SAPI/core resources when COM
+allows the module to unload, while preserving active voices and supporting later
+reinitialization. Voice enumeration and candidate lists grow dynamically, fixing
+the old 150-entry overflow without dropping installed languages or variants.
+The public C API also supports clean repeated Initialize/Terminate cycles.
+Pronunciation data, Vario's interface and speed settings are unchanged.
+
+Wydanie poprawia zwalnianie wspólnych zasobów SAPI i rdzenia po zakończeniu ich
+używania oraz ponowną inicjalizację silnika. Dynamiczny katalog głosów usuwa błąd
+przepełnienia dawnej tablicy 150 elementów, bez obcinania języków i wariantów.
+Słowniki, interfejs Vario i ustawienia szybkości pozostają bez zmian.
 
 The voice-variant collection is synchronized with the 104 variants shipped by
 eSpeak NG 1.52.0. The `fast` variant keeps its equivalent classic-eSpeak syntax

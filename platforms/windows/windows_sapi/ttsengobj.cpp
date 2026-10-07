@@ -690,6 +690,33 @@ static int ConvertRange(int range)
 	return converted;
 }
 
+void CleanupSapiEngine()
+{
+	// DllCanUnloadNow holds the shared lock and excludes all live COM objects.
+	// Terminate is also safe after a partially failed initialization.
+	espeak_Terminate();
+	espeak_SetSynthCallback(NULL);
+	free(TextBuf);
+	TextBuf = NULL;
+	gBufCapacity = 0;
+	free(frag_offsets);
+	frag_offsets = NULL;
+	n_frag_offsets = frag_ix = frag_count = 0;
+	free(path_install);
+	path_install = NULL;
+	g_voice_name[0] = 0;
+	initialised = 0;
+	srate = 0;
+#ifdef LOG_DEBUG
+	if(f_log2 != NULL)
+	{
+		fclose(f_log2);
+		f_log2 = NULL;
+	}
+#endif
+}
+
+
 CTTSEngObj::CTTSEngObj()
     : m_ref_count(1),
       m_cpToken(nullptr),
@@ -745,7 +772,7 @@ HRESULT CTTSEngObj::FinalConstruct()
     HRESULT hr = S_OK;
 
 #ifdef LOG_DEBUG
-f_log2=fopen("C:\\log_espeak","a");
+if(f_log2 == NULL) f_log2=fopen("C:\\log_espeak","a");
 if(f_log2) fprintf(f_log2,"\n****\n");
 #endif
 
@@ -755,9 +782,7 @@ if(f_log2) fprintf(f_log2,"\n****\n");
 
 void CTTSEngObj::FinalRelease()
 {//============================
-#ifdef LOG_DEBUG
-if(f_log2!=NULL) fclose(f_log2);
-#endif
+	// Shared engine resources are released only by DllCanUnloadNow.
 } /* CTTSEngObj::FinalRelease */
 
 

@@ -1275,11 +1275,27 @@ ESPEAK_API espeak_ERROR espeak_Terminate(void)
 	}
 
 #endif
+	// Stop queued work before invalidating data referenced by its commands.
+	SpeakNextClause(NULL,NULL,2);
+	WavegenCloseSound();
 	Free(event_list);
 	event_list = NULL;
+	n_event_list = 0;
+	event_list_ix = 0;
+	MbrolaTerminate();
+	InitNamedata();
+	FreeTranslators();
+	FreeVoiceList();
+	FreeSoundIcons();
 	Free(outbuf);
 	outbuf = NULL;
+	out_start = NULL;
+	out_ptr = NULL;
+	out_end = NULL;
+	outbuf_size = 0;
 	FreePhData();
+	memset(&voice_selected,0,sizeof(voice_selected));
+	my_user_data = NULL;
 
 	if(f_logespeak)
 	{

@@ -60,6 +60,8 @@ public:
     size_t eventsAtAbort = 0;
     size_t writesAfterAbort = 0;
     size_t eventsAfterAbort = 0;
+    HRESULT (STDAPICALLTYPE* checkCanUnload)() = nullptr;
+    bool moduleStayedBusy = true;
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id, void** object) override {
         if (!object) return E_POINTER;
         *object = nullptr;
@@ -103,6 +105,7 @@ public:
         return SPVES_RATE | SPVES_VOLUME;
     }
     HRESULT STDMETHODCALLTYPE Write(const void* data, ULONG length, ULONG* written) override {
+        if (checkCanUnload && checkCanUnload() != S_FALSE) moduleStayedBusy = false;
         writeCalls++;
         if (abortReported) writesAfterAbort++;
         if (!written) return E_POINTER;
@@ -201,11 +204,18 @@ static bool WriteWave(const wchar_t* path, const std::vector<BYTE>& audio) {
     return fclose(file) == 0 && success;
 }
 
+#include "sapi-lifetime-tests.h"
+
 int wmain(int argc, wchar_t** argv) {
+    SetUnhandledExceptionFilter(ReportLifetimeException);
     if (!VerifySettingsParsing()) return 9;
     // Caller provides a dedicated build directory, source data and output WAV.
     // No registration or replacement of the installed synthesizer is needed.
     if (argc != 5 && argc != 6) return 1;
+    if (argc == 6 && wcscmp(argv[5], L"lifecycle") == 0)
+        return RunSapiLifetimeTests(argv[1], argv[2], argv[3]) ? 0 : 10;
+    if (argc == 6 && wcscmp(argv[5], L"api-lifecycle") == 0)
+        return RunApiLifetimeTests(argv[1], argv[2], argv[3]) ? 0 : 11;
     if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED))) return 2;
     HMODULE module = LoadLibraryW(argv[1]);
     if (!module) return 3;
@@ -309,9 +319,11 @@ int wmain(int argc, wchar_t** argv) {
     wchar_t subkey[160];
     swprintf_s(subkey, L"SOFTWARE\\eSpeakSynthesisTest-%lu", GetCurrentProcessId());
     const LONG cleanup = RegDeleteTreeW(HKEY_CURRENT_USER, subkey);
+    const auto canUnload = reinterpret_cast<CanUnloadFunction>(GetProcAddress(module, "DllCanUnloadNow"));
+    const bool unloadReady = canUnload && canUnload() == S_OK;
     FreeLibrary(module);
     CoUninitialize();
     wprintf(L"SAPI synthesis: HRESULT=%08lx, PCM bytes=%zu, events=%zu, valid=%d\n",
         result, site.audio.size(), site.events.size(), eventsPassed);
-    return passed && cleanup == ERROR_SUCCESS ? 0 : 8;
+    return passed && unloadReady && cleanup == ERROR_SUCCESS ? 0 : 8;
 }

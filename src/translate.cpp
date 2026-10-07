@@ -439,9 +439,21 @@ int IsSpace(unsigned int c)
 
 void DeleteTranslator(Translator *tr)
 {//==================================
+	if(tr == NULL)
+		return;
 	if(tr->data_dictlist != NULL)
 		Free(tr->data_dictlist);
 	Free(tr);
+}
+
+
+void FreeTranslators(void)
+{
+	DeleteTranslator(translator2);
+	DeleteTranslator(translator);
+	translator2 = NULL;
+	translator = NULL;
+	translator2_language[0] = 0;
 }
 
 

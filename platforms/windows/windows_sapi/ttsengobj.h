@@ -14,6 +14,8 @@
 extern volatile LONG g_module_object_count;
 void LockSapiEngine();
 void UnlockSapiEngine();
+// Caller must hold the engine lock and have no live COM objects/server locks.
+void CleanupSapiEngine();
 
 class CTTSEngObj final : public ISpTTSEngine, public ISpObjectWithToken
 {
