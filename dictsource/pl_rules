@@ -687,6 +687,9 @@
 		z		z
 
 	// Polish z- + i... families: keep hard z + separate i
+	_)	zi	(śc	z_i	// ziścić and its inflections: WSJP z-iścić
+	_)	zi	(ść	z_i	// ziść, ziśćmy, ziśćcie...
+	_)	zi	(szcz	z_i	// ziszczać, ziszczony, ziszczenie...
 	_)	zi	(dent	z_i	// zidentyfikować, zidentyfikowany, zidentyfikowano...
 	_)	zi	(gnor	z_i
 	_)	zi	(ndeks	z_i
@@ -723,7 +726,6 @@
 	_)	zi	(p	Z;i
 		zi	(m+	Z;i
 	_nie)	zi	(C	z_i
-	_nie)	zi	(szcz	Z;i	// nieziszczalny, nieziszczenie: retain soft z from ziszcz-
 
 	_)	z	(_c	s
 	_)	z	(_f	s

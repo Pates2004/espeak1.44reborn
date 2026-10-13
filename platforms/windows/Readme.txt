@@ -1,5 +1,16 @@
-eSpeak 1.44.05 r35 - Windows 32-bit (x86)
+eSpeak 1.44.05 r36 - Windows 32-bit (x86)
 ====================================
+
+r36: The ziścić/ziszcz- family uses separate hard z and i, including nie- forms.
+The soft ź assumption for nieziszcz- in r35 was incorrect and is superseded.
+Sing-family and all other approved settings/pronunciations are retained.
+
+r36: Rodzina ziścić/ziszcz- ma twarde z i osobne i, także w formach z nie-.
+Miękki wyjątek nieziszcz- z r35 był błędny i został zastąpiony tą poprawką.
+Poprawka sing- oraz pozostałe uzgodnione wymowy i ustawienia są zachowane.
+
+Historical r35 notes below: the soft ź statement is superseded by r36.
+Historyczny opis r35 poniżej: informację o miękkim ź zastąpiła poprawka r36.
 
 r35: Polish sing/singing/singer use the requested soft onset; singiel and
 the singl- family retain hard s. Existing synthesis and Vario settings remain.

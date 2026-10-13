@@ -1,19 +1,41 @@
 > Local build and assistant materials were moved to `D:\work\espeak-1.44.05-source\espeak1.44reborn`. Paths beginning with `installfiles`, `Workspace`, `snapshots`, `trash` or `Forme` below refer to that central directory; source paths remain relative to this checkout. Use `C:\work` only if drive D: does not exist.
 
-# eSpeak 1.44.05 Reborn — r35 (32-bit)
+# eSpeak 1.44.05 Reborn — r36 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r35 project:
+eSpeak r36 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r35` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r36` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
 
-## Release r35 / Wydanie r35
+## Release r36 / Wydanie r36
+
+This dictionary correction uses separate hard `z` and `i` in `ziścić`, `ziszcz-`
+and their inflections, including forms beginning with `nie-`. WSJP records
+`ziścić` as [z-iścić] and `ziszczać się` as [z-iszczać się]. The soft-`ź`
+exception introduced for `nieziszcz-` in r35 was incorrect and has been removed.
+The sing-family correction, earlier approved pronunciations, Vario and synthesis
+settings remain in place.
+
+Wydanie słownikowe przywraca osobne, twarde `z` i samogłoskę `i` w rodzinie
+`ziścić`/`ziszcz-`, również w odmianach i formach z `nie-`. WSJP podaje
+[z-iścić] oraz [z-iszczać się]. Miękki wyjątek dla `nieziszcz-` dodany w r35
+był błędny i został usunięty. Poprawka rodziny `sing-`, wcześniejsze uzgodnione
+wymowy, Vario i ustawienia syntezy pozostają zachowane.
+
+Sources / Źródła: [WSJP: ziścić](https://wsjp.pl/haslo/podglad/65243/ziscic),
+[WSJP: ziszczać się](https://wsjp.pl/haslo/podglad/43703/ziszczac-sie).
+
+## Release r35 / Wydanie r35 — historical / historyczne
+
+The soft-`ź` claim for `nieziszcz-` below was an incorrect linguistic conclusion,
+superseded by r36. Poniższy opis miękkiego `ź` w `nieziszcz-` był błędną oceną
+wymowy i został zastąpiony poprawką r36. It is retained here as release history.
 
 The Polish dictionary no longer forces hard `s` in every word beginning with
 `sing-`. English-spelled `sing`, `singing` and `singer` now use the requested
