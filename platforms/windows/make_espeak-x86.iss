@@ -1,10 +1,17 @@
 ; Inno Setup 6 installer for the native 32-bit Windows build of eSpeak 1.44.05
 
+#ifndef PackageDir
+  #error Build with build-x86.ps1 to supply the centralized package directory.
+#endif
+#ifndef InstallerDir
+  #error Build with build-x86.ps1 to supply the centralized installer directory.
+#endif
+
 [Setup]
 AppName=eSpeak
 AppId={{B0E0EE35-0C47-4C1A-A37D-82D12B0A6C32}
 AppVersion=1.44.05
-AppVerName=eSpeak version 1.44.05 r34 (32-bit)
+AppVerName=eSpeak version 1.44.05 r35 (32-bit)
 AppCopyright=Licensed under GNU General Public License version 3.   (See file License.txt for details).
 WizardStyle=modern
 LicenseFile=..\..\License.txt
@@ -13,15 +20,15 @@ ArchitecturesAllowed=x86compatible
 
 DefaultDirName={autopf}\eSpeak
 DefaultGroupName=eSpeak
-OutputDir=..\..\installfiles
-OutputBaseFilename=setup_espeak-1.44.05-x86-r34
+OutputDir={#InstallerDir}
+OutputBaseFilename=setup_espeak-1.44.05-x86-r35
 Compression=lzma2/ultra64
 SolidCompression=yes
 ShowLanguageDialog=auto
 UninstallDisplayIcon={app}\TTSApp.exe
-VersionInfoVersion=1.44.5.34
+VersionInfoVersion=1.44.5.35
 VersionInfoProductName=eSpeak
-VersionInfoDescription=eSpeak 1.44.05 r34 native 32-bit installer
+VersionInfoDescription=eSpeak 1.44.05 r35 native 32-bit installer
 
 [InstallDelete]
 Type: files; Name: "{app}\espeak.dll"
@@ -34,16 +41,16 @@ Name: "{app}\espeak-data\soundicons"
 Name: "{app}\espeak-data\mbrola"
 
 [Files]
-Source: "..\..\build\x86\package\espeak_sapi.dll"; DestDir: "{app}"; Flags: regserver ignoreversion
-Source: "..\..\build\x86\package\TTSApp.exe"; DestDir:"{app}"; Flags: ignoreversion
-Source: "..\..\build\x86\package\Vario.exe"; DestDir:"{app}"; Flags: ignoreversion; Check: ShouldInstallVario
-Source: "..\..\build\x86\package\espeak-data\*"; DestDir: "{app}\espeak-data"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "..\..\build\x86\package\dictsource\*"; DestDir: "{app}\dictsource"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "..\..\build\x86\package\docs\*"; DestDir: "{app}\docs"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "..\..\build\x86\package\command_line\*"; DestDir: "{app}\command_line"; Flags: recursesubdirs createallsubdirs ignoreversion
-Source: "..\..\build\x86\package\Readme.txt"; DestDir: "{app}"; Flags: isreadme ignoreversion
-Source: "..\..\build\x86\package\License.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\build\x86\package\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
+Source: "{#PackageDir}\espeak_sapi.dll"; DestDir: "{app}"; Flags: regserver ignoreversion
+Source: "{#PackageDir}\TTSApp.exe"; DestDir:"{app}"; Flags: ignoreversion
+Source: "{#PackageDir}\Vario.exe"; DestDir:"{app}"; Flags: ignoreversion; Check: ShouldInstallVario
+Source: "{#PackageDir}\espeak-data\*"; DestDir: "{app}\espeak-data"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#PackageDir}\dictsource\*"; DestDir: "{app}\dictsource"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#PackageDir}\docs\*"; DestDir: "{app}\docs"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#PackageDir}\command_line\*"; DestDir: "{app}\command_line"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#PackageDir}\Readme.txt"; DestDir: "{app}"; Flags: isreadme ignoreversion
+Source: "{#PackageDir}\License.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PackageDir}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\eSpeak SAPI test (32-bit)"; Filename: "{app}\TTSApp.exe"; WorkingDir: "{app}"

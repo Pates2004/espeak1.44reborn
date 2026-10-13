@@ -1,5 +1,15 @@
-eSpeak 1.44.05 r34 - Windows 32-bit (x86)
+eSpeak 1.44.05 r35 - Windows 32-bit (x86)
 ====================================
+
+r35: Polish sing/singing/singer use the requested soft onset; singiel and
+the singl- family retain hard s. Existing synthesis and Vario settings remain.
+The nieziszcz- family preserves voiced soft ź after the nie- prefix.
+Build and installer output consistently use the central material directory.
+
+r35: Sing/singing/singer mają miękki początek. Singiel i rodzina singl-
+zachowują twarde s. Działanie syntezy i ustawienia Vario pozostają zachowane.
+Rodzina nieziszcz- zachowuje dźwięczne, miękkie ź po przedrostku nie-.
+Wyniki kompilacji i instalatory korzystają z centralnego katalogu materiałów.
 
 r34: Safe shared SAPI/core teardown and reinitialization; dynamic voice catalogs
 remove the old 150-entry overflow without dropping languages or variants.

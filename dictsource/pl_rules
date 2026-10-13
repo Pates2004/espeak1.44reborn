@@ -428,7 +428,12 @@
 	_)	s	(ilos	s
 	_)	s	(inus	s
 	_)	s	(inol	s
-	_)	s	(ing	s
+	// Keep hard s in the Polish singiel/singel and Singapur families.
+	_)	s	(ingl	s
+	_)	s	(ingiel	s
+	_)	s	(ingel	s
+	_)	s	(ingapur	s
+	_)	s	(ingular	s	// preserve existing out-of-scope pronunciation
 
 		s	(i	S;
 		si	(A	S;
@@ -718,6 +723,7 @@
 	_)	zi	(p	Z;i
 		zi	(m+	Z;i
 	_nie)	zi	(C	z_i
+	_nie)	zi	(szcz	Z;i	// nieziszczalny, nieziszczenie: retain soft z from ziszcz-
 
 	_)	z	(_c	s
 	_)	z	(_f	s

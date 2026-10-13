@@ -4,13 +4,15 @@ param(
     [switch]$SkipTests
 )
 
+. (Join-Path $PSScriptRoot '..\..\project_materials.ps1')
+
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$x86ProjectDir = Join-Path $projectRoot 'platforms\windows\x86'
-$releaseDir = Join-Path $projectRoot 'build\x86\Release'
-$stageDir = Join-Path $projectRoot 'build\x86\package'
-$installerDir = Join-Path $projectRoot 'installfiles'
-$varioPublishDir = Join-Path $projectRoot 'build\x86\vario\win-x86'
+$x86ProjectDir = Join-ProjectMaterialPath $projectRoot 'platforms\windows\x86'
+$releaseDir = Join-ProjectMaterialPath $projectRoot 'build\x86\Release'
+$stageDir = Join-ProjectMaterialPath $projectRoot 'build\x86\package'
+$installerDir = Join-ProjectMaterialPath $projectRoot 'installfiles'
+$varioPublishDir = Join-ProjectMaterialPath $projectRoot 'build\x86\vario\win-x86'
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (-not (Test-Path -LiteralPath $vswhere)) {
@@ -49,7 +51,7 @@ foreach ($project in $projects) {
     }
 }
 
-& dotnet publish (Join-Path $projectRoot 'platforms\windows\Vario\Vario.csproj') `
+& dotnet publish (Join-ProjectMaterialPath $projectRoot 'platforms\windows\Vario\Vario.csproj') `
     -c Release -r win-x86 --self-contained false -o $varioPublishDir
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $varioPublishDir 'Vario.exe'))) {
     throw 'The Vario x86 build failed.'
@@ -90,30 +92,30 @@ if (-not $SkipTests) {
     }
 }
 
-$resolvedBuildRoot = [IO.Path]::GetFullPath((Join-Path $projectRoot 'build'))
+$resolvedBuildRoot = [IO.Path]::GetFullPath((Join-ProjectMaterialPath $projectRoot 'build'))
 $resolvedStage = [IO.Path]::GetFullPath($stageDir)
 if (-not $resolvedStage.StartsWith($resolvedBuildRoot + [IO.Path]::DirectorySeparatorChar,
                                    [StringComparison]::OrdinalIgnoreCase)) {
     throw "Unsafe package staging path: $resolvedStage"
 }
 if (Test-Path -LiteralPath $resolvedStage) {
-    Remove-Item -LiteralPath $resolvedStage -Recurse -Force
+    throw "Archive or classify the existing package staging directory before rebuilding: $resolvedStage"
 }
 
 New-Item -ItemType Directory -Path $resolvedStage,(Join-Path $resolvedStage 'command_line'),(Join-Path $resolvedStage 'licenses') | Out-Null
-Copy-Item -LiteralPath (Join-Path $projectRoot 'espeak-data') -Destination $resolvedStage -Recurse
-Copy-Item -LiteralPath (Join-Path $projectRoot 'dictsource') -Destination $resolvedStage -Recurse
-Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $resolvedStage -Recurse
+Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'espeak-data') -Destination $resolvedStage -Recurse
+Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'dictsource') -Destination $resolvedStage -Recurse
+Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'docs') -Destination $resolvedStage -Recurse
 Copy-Item -LiteralPath (Join-Path $releaseDir 'espeak_sapi.dll'),(Join-Path $releaseDir 'TTSApp.exe') -Destination $resolvedStage
 Copy-Item -LiteralPath (Join-Path $varioPublishDir 'Vario.exe') -Destination $resolvedStage
-Copy-Item -LiteralPath (Join-Path $projectRoot 'platforms\windows\third_party\sonic\LICENSE') -Destination (Join-Path $resolvedStage 'licenses\Sonic-LICENSE.txt')
-Copy-Item -LiteralPath (Join-Path $releaseDir 'espeak.exe'),(Join-Path $releaseDir 'espeak_lib.dll'),(Join-Path $projectRoot 'src\speak_lib.h') -Destination (Join-Path $resolvedStage 'command_line')
-Copy-Item -LiteralPath (Join-Path $projectRoot 'platforms\windows\Readme.txt') -Destination (Join-Path $resolvedStage 'Readme.txt')
-Copy-Item -LiteralPath (Join-Path $projectRoot 'License.txt') -Destination $resolvedStage
+Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'platforms\windows\third_party\sonic\LICENSE') -Destination (Join-Path $resolvedStage 'licenses\Sonic-LICENSE.txt')
+Copy-Item -LiteralPath (Join-Path $releaseDir 'espeak.exe'),(Join-Path $releaseDir 'espeak_lib.dll'),(Join-ProjectMaterialPath $projectRoot 'src\speak_lib.h') -Destination (Join-Path $resolvedStage 'command_line')
+Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'platforms\windows\Readme.txt') -Destination (Join-Path $resolvedStage 'Readme.txt')
+Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'License.txt') -Destination $resolvedStage
 
 if (-not $SkipInstaller) {
-    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r34.exe')) {
-        throw 'Archive the existing r34 installer in snapshots before replacing it.'
+    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r35.exe')) {
+        throw 'Archive the existing r35 installer in snapshots before replacing it.'
     }
     $isccCandidates = @(
         (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
@@ -125,7 +127,8 @@ if (-not $SkipInstaller) {
         throw 'ISCC.exe was not found. Install Inno Setup 6 (winget install JRSoftware.InnoSetup).'
     }
 
-    & $iscc (Join-Path $projectRoot 'platforms\windows\make_espeak-x86.iss')
+    & $iscc "/DPackageDir=$resolvedStage" "/DInstallerDir=$installerDir" `
+        (Join-ProjectMaterialPath $projectRoot 'platforms\windows\make_espeak-x86.iss')
     if ($LASTEXITCODE -ne 0) {
         throw 'Installer compilation failed.'
     }
@@ -134,5 +137,5 @@ if (-not $SkipInstaller) {
 Write-Host "Binaries: $releaseDir"
 Write-Host "Package:  $resolvedStage"
 if (-not $SkipInstaller) {
-    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r34.exe')"
+    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r35.exe')"
 }

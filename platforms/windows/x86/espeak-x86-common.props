@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\project-materials.props" Condition="'$(ProjectBuildRoot)' == ''" />
   <PropertyGroup>
-    <OutDir>$(ProjectDir)..\..\..\build\x86\$(Configuration)\</OutDir>
-    <IntDir>$(ProjectDir)..\..\..\build\x86\obj\$(ProjectName)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectBuildRoot)x86\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectBuildRoot)x86\obj\$(ProjectName)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>

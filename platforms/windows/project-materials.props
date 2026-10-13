@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectSourceRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\'))</ProjectSourceRoot>
+    <ProjectSourceName>$([System.IO.Path]::GetFileName('$(ProjectSourceRoot.TrimEnd(`\`))'))</ProjectSourceName>
+    <ProjectMaterialsDrive Condition="'$(ProjectMaterialsDrive)' == '' And Exists('D:\')">D:</ProjectMaterialsDrive>
+    <ProjectMaterialsDrive Condition="'$(ProjectMaterialsDrive)' == ''">C:</ProjectMaterialsDrive>
+    <ProjectMaterialsRoot Condition="'$(ProjectMaterialsRoot)' == ''">$(ProjectMaterialsDrive)\work\$(ProjectSourceName)</ProjectMaterialsRoot>
+    <ProjectMaterialsRoot Condition="'$(ProjectSourceRoot)' == 'D:\espeak-1.44.05-source\espeak-1.44.05-source\'">$(ProjectMaterialsDrive)\work\espeak-1.44.05-source\espeak-1.44.05-source</ProjectMaterialsRoot>
+    <ProjectMaterialsRoot Condition="'$(ProjectSourceRoot)' == 'D:\espeak-1.44.05-source\espeak1.44reborn\'">$(ProjectMaterialsDrive)\work\espeak-1.44.05-source\espeak1.44reborn</ProjectMaterialsRoot>
+    <ProjectBuildRoot Condition="'$(ProjectBuildRoot)' == ''">$(ProjectMaterialsRoot)\Workspace\build\</ProjectBuildRoot>
+  </PropertyGroup>
+</Project>

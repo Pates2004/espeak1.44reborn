@@ -1,0 +1,7 @@
+<Project>
+  <Import Project="project-materials.props" />
+  <PropertyGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <BaseOutputPath>$(ProjectBuildRoot)managed\$(MSBuildProjectName)\bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(ProjectBuildRoot)managed\$(MSBuildProjectName)\obj\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

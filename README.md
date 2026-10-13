@@ -1,15 +1,37 @@
-# eSpeak 1.44.05 Reborn — r34 (32-bit)
+> Local build and assistant materials were moved to `D:\work\espeak-1.44.05-source\espeak1.44reborn`. Paths beginning with `installfiles`, `Workspace`, `snapshots`, `trash` or `Forme` below refer to that central directory; source paths remain relative to this checkout. Use `C:\work` only if drive D: does not exist.
+
+# eSpeak 1.44.05 Reborn — r35 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r34 project:
+eSpeak r35 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r34` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r35` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
+
+## Release r35 / Wydanie r35
+
+The Polish dictionary no longer forces hard `s` in every word beginning with
+`sing-`. English-spelled `sing`, `singing` and `singer` now use the requested
+soft Polish onset. Polish `singiel` and the `singl-` family retain hard `s`.
+Other established Polish hard-onset exceptions remain explicit and bounded.
+The `nieziszcz-` family now retains the voiced soft `ź` of `ziszcz-` after `nie-`.
+Build output and installer inputs now consistently use the central material
+directory; native synthesis, Vario controls and speed modes are unchanged.
+
+Polski słownik nie wymusza już twardego `s` we wszystkich słowach na `sing-`.
+`Sing`, `singing` i `singer` mają miękki początek zgodnie z życzeniem użytkownika.
+`Singiel` i rodzina `singl-` zachowują twarde `s`. Pozostałe polskie wyjątki mają
+osobne, ograniczone reguły. Wyniki kompilacji i dane instalatora korzystają
+z centralnego katalogu materiałów; działanie Vario i tryby szybkości są zachowane.
+Rodzina `nieziszcz-` zachowuje dźwięczne, miękkie `ź` także po przedrostku `nie-`.
+
+`build/...` in build instructions resolves to `Workspace/build/...` under the
+central material directory. Sources and project configuration stay in this checkout.
 
 ## Release r34 / Wydanie r34
 
