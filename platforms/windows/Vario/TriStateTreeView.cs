@@ -12,21 +12,22 @@ internal enum TreeNodeCheckState
 internal sealed class TriStateTreeView : TreeView
 {
     private const int WmLeftButtonDown = 0x0201;
+    private const int WmGetObject = 0x003D;
     private const int TvFirst = 0x1100;
     private const int TvmSetItemW = TvFirst + 63;
     private const int TvmSetExtendedStyle = TvFirst + 44;
     private const int TvsExPartialCheckBoxes = 0x0080;
     private const uint TvifState = 0x0008;
     private const uint TvisStateImageMask = 0xF000;
+    private NativeAccessibleLabel? accessibleLabel;
 
     internal event EventHandler<TreeViewEventArgs>? CheckStateChanged;
 
     internal TriStateTreeView()
     {
-        // Let WinForms expose the native state images through the standard
-        // UI Automation Toggle pattern. Without this style NVDA receives a
-        // bare node-name event followed by a separate legacy state event.
-        CheckBoxes = true;
+        // Extended native checkboxes must be initialized without TVS_CHECKBOXES.
+        // Combining them permanently limits the control to two native states.
+        CheckBoxes = false;
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -34,7 +35,35 @@ internal sealed class TriStateTreeView : TreeView
         base.OnHandleCreated(e);
         SendMessage(Handle, TvmSetExtendedStyle,
             (nint)TvsExPartialCheckBoxes, (nint)TvsExPartialCheckBoxes);
-        ApplyStoredStates(Nodes);
+        RestoreCheckStates();
+        accessibleLabel = new NativeAccessibleLabel(Handle);
+        accessibleLabel.Set(AccessibleName ?? string.Empty, AccessibleDescription ?? string.Empty);
+    }
+
+    protected override void OnHandleDestroyed(EventArgs e)
+    {
+        NativeAccessibleLabel? previousLabel = accessibleLabel;
+        accessibleLabel = null;
+        try
+        {
+            previousLabel?.Dispose();
+        }
+        finally
+        {
+            base.OnHandleDestroyed(e);
+        }
+    }
+
+    internal void SetAccessibleLabel(string name)
+    {
+        AccessibleName = name;
+        accessibleLabel?.Set(name, AccessibleDescription ?? string.Empty);
+    }
+
+    internal void RestoreCheckStates()
+    {
+        if (IsHandleCreated)
+            ApplyStoredStates(Nodes);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -52,6 +81,13 @@ internal sealed class TriStateTreeView : TreeView
 
     protected override void WndProc(ref Message message)
     {
+        if (message.Msg == WmGetObject)
+        {
+            // The native tree provider understands all three state images;
+            // WinForms' TreeNode provider reduces them to its Boolean Checked.
+            DefWndProc(ref message);
+            return;
+        }
         if (message.Msg == WmLeftButtonDown)
         {
             long coordinates = message.LParam.ToInt64();
@@ -80,12 +116,11 @@ internal sealed class TriStateTreeView : TreeView
 
     internal void SetCheckState(TreeNode node, TreeNodeCheckState state)
     {
-        bool isChecked = state == TreeNodeCheckState.Checked;
-        if (node.Checked != isChecked)
-            node.Checked = isChecked;
+        if (GetCheckState(node) == state)
+            return;
+        // Keep one three-state value. Updating Boolean Checked first would
+        // publish an intermediate unchecked state before a partial selection.
         node.StateImageIndex = (int)state - 1;
-        if (IsHandleCreated && node.TreeView == this && node.Handle != nint.Zero)
-            ApplyNativeState(node, state);
     }
 
     private void ToggleNode(TreeNode node)

@@ -10,8 +10,8 @@ $dataRoot = (Resolve-Path -LiteralPath $DataPath).Path
 $fixturePath = Join-Path $PSScriptRoot 'test-data\polish-symbol-names.tsv'
 $sourcePath = Join-Path $PSScriptRoot '..\..\dictsource\pl_list'
 $cases = @(Import-Csv -LiteralPath $fixturePath -Delimiter "`t" -Encoding UTF8)
-if ($cases.Count -ne 55) {
-    throw 'The Polish symbol fixture must contain exactly 55 existing entries.'
+if ($cases.Count -ne 56) {
+    throw 'The Polish symbol fixture must contain exactly 56 entries.'
 }
 
 $requiredColumns = @('Key', 'Text', 'Kind', 'OriginalPhonemes', 'ExpectedPhonemes', 'ExpectedTrace')
@@ -110,8 +110,8 @@ foreach ($case in $cases) {
         Assert-SquareVoicing $case.Key $case.ExpectedPhonemes
     }
 }
-if ($kindCounts.punctuation -ne 33 -or $kindCounts.direct -ne 16 -or $kindCounts.accent -ne 6) {
-    throw 'The symbol fixture must retain 33 punctuation, 16 direct and six accent entries.'
+if ($kindCounts.punctuation -ne 34 -or $kindCounts.direct -ne 16 -or $kindCounts.accent -ne 6) {
+    throw 'The symbol fixture must retain 34 punctuation, 16 direct and six accent entries.'
 }
 if (-not $keys.Contains($nbspKey)) {
     throw 'The source-only NBSP record is missing.'
@@ -226,7 +226,7 @@ if ([regex]::Matches($capitalTrace, "z[',]*amkn").Count -ne 2) {
 }
 
 # Composed labels use another fixture because their descriptor is combined with
-# the base letter at runtime. Preserve the first 55 cases as independent evidence.
+# the base letter at runtime. Keep the 56 direct-label cases independent.
 $compositionPath = Join-Path $PSScriptRoot 'test-data\polish-composed-symbols.tsv'
 $compositions = @(Import-Csv -LiteralPath $compositionPath -Delimiter "`t" -Encoding UTF8)
 if ($compositions.Count -ne 17) {
@@ -296,5 +296,5 @@ if ($compositionKeys.Count -ne 10 -or $compositionSourceOnlyCount -ne 1 -or $com
     throw 'Composed-symbol coverage must retain ten descriptors, 16 runtime cases and one source-only case.'
 }
 
-Write-Host "Polish symbol test OK: 65 unique source records, $runtimeCount exact symbol traces, $compositionRuntimeCount exact composition traces and six short controls."
+Write-Host "Polish symbol test OK: 66 unique source records, $runtimeCount exact symbol traces, $compositionRuntimeCount exact composition traces and six short controls."
 Write-Host 'Limits: NBSP and the double-acute descriptor are source-only; audio pause duration is not measured here. The existing two-letter joining inside generic ligatures is unchanged.'

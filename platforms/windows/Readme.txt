@@ -1,5 +1,13 @@
-eSpeak 1.44.05 r36 - Windows 32-bit (x86)
+eSpeak 1.44.05 r37 - Windows 32-bit (x86)
 ====================================
+
+r37: Vario publishes checkbox state changes and native partial tree selections.
+Fresh settings have Sonic disabled; explicit existing choices are retained.
+Polish ASCII '-' is named minus. Existing bracket names remain unchanged.
+
+r37: Vario udostępnia zmiany zaznaczenia pól i częściowe zaznaczenie języków.
+W nowych ustawieniach Sonic jest wyłączony; zapisane wybory są zachowane.
+Polski znak ASCII '-' ma nazwę minus. Nazwy nawiasów pozostają bez zmian.
 
 r36: The ziścić/ziszcz- family uses separate hard z and i, including nie- forms.
 The soft ź assumption for nieziszcz- in r35 was incorrect and is superseded.
@@ -50,7 +58,10 @@ asks before removing the current installed voice; Shift+Delete omits that
 confirmation. Remove selected always asks. Apply saves pending voice and speed
 changes. Inflection adjusts pitch variation, not the base pitch.
 
-Speed modes: smooth (new default), NVDA-style x3, and legacy upper-range boost.
+Sonic is initially disabled when no saved INI or legacy choice exists. Explicit
+saved on/off choices are preserved. Voices added later use the installation's
+saved setting. Enable the extended speed range to use the selected Sonic mode.
+Speed modes: smooth (initially selected), NVDA-style x3, and legacy upper-range boost.
 Smooth covers 80-1350 words per minute, retaining native articulation up to 300;
 above 300 Sonic progressively shortens the audio. Existing saved speed settings
 are preserved. Disabling the extended speed range restores ordinary eSpeak
@@ -106,7 +117,11 @@ bieżącego zainstalowanego głosu, Shift+Delete pomija pytanie, a Usuń zaznacz
 zawsze wymaga potwierdzenia. Zastosuj zapisuje zmiany głosów i prędkości.
 Modulacja oznacza zmienność wysokości mowy, a nie podstawową wysokość głosu.
 
-Tryby prędkości: płynny (nowy domyślny), jak w NVDA x3 oraz dotychczasowe
+Sonic jest początkowo wyłączony przy braku zapisanego wyboru INI lub starszych
+ustawień. Wcześniejsze włączenie lub wyłączenie pozostaje zachowane. Dodane
+później głosy korzystają z zapisanego ustawienia instalacji. Zaznacz rozszerzony
+zakres szybkości, aby użyć wybranego trybu Sonica.
+Tryby prędkości: płynny (początkowo wybrany), jak w NVDA x3 oraz dotychczasowe
 przyspieszanie górnej części skali. Tryb płynny obejmuje 80-1350 słów na minutę:
 do 300 pracuje natywny silnik, wyżej Sonic stopniowo skraca dźwięk przy stałej
 artykulacji silnika. Dotychczasowe zapisane ustawienia pozostają zachowane.

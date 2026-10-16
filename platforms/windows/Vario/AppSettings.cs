@@ -31,7 +31,7 @@ internal sealed class SettingsStore
         bool needsInitialization = boost.Length == 0 || mode.Length == 0;
         LegacySpeedSettings legacy = needsInitialization
             ? readLegacy() : new(false, false, SonicMode.Nvda);
-        bool defaultBoost = legacy.HasSettings ? legacy.SonicBoost : true;
+        bool defaultBoost = legacy.HasSettings && legacy.SonicBoost;
         SonicMode defaultMode = legacy.HasSettings ? legacy.SonicMode : SonicMode.Smooth;
         VarioSettings settings = new(
             boost switch { "0" => false, "1" => true, _ => defaultBoost },

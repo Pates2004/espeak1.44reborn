@@ -35,7 +35,7 @@
 #include "translate.h"
 #include "wave.h"
 
-const char *version_string = "1.44.05-r36 Windows x86";
+const char *version_string = "1.44.05-r37 Windows x86";
 const int version_phdata  = 0x014404;
 
 int option_device_number = -1;

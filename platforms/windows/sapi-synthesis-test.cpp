@@ -17,13 +17,13 @@ static bool VerifySettingsParsing() {
         DWORD expectedMode;
     };
     const Scenario scenarios[] = {
-        {L"", L"", {false, false, 0}, true, 2},
+        {L"", L"", {false, false, 0}, false, 2},
         {L"", L"", {true, false, 1}, false, 1},
         {L"", L"", {true, true, 99}, true, 1},
         {L"0", L"2", {true, true, 1}, false, 2},
-        {L"invalid", L"99", {true, false, 0}, true, 2},
+        {L"invalid", L"99", {true, false, 0}, false, 2},
         {L"", L"99", {true, false, 1}, false, 1},
-        {L"2", L"1", {true, false, 0}, true, 1},
+        {L"2", L"1", {true, false, 0}, false, 1},
         {L"1", L"0", {false, false, 0}, true, 0},
         {L"0", L"", {true, true, 2}, false, 2}
     };

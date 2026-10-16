@@ -11,8 +11,9 @@ The extended-range checkbox is separate from a radio-button choice of three
 speed modes. Smooth mode maps the SAPI slider over the full 80–1350 WPM range
 and adds Sonic automatically above 300 WPM. NVDA-style mode triples the
 ordinary underlying rate; the original mode boosts only upper positive
-rates. Smooth mode with the extended range enabled is the default for new
-settings. Existing saved modes and the previous checkbox state are retained.
+rates. Fresh settings select smooth mode with the extended range disabled.
+Existing saved modes and the previous checkbox state are retained. Adding a
+voice uses the installation's saved setting; it does not reset existing choices.
 Turning off the extended range restores ordinary eSpeak speed regulation.
 
 Available and installed voices are presented as checkable trees. Checking a
@@ -65,7 +66,8 @@ Pole rozszerzonego zakresu prędkości jest niezależne od wyboru trzech trybów
 Tryb płynny obejmuje cały zakres 80–1350 SNM i automatycznie dołącza Sonic
 powyżej 300 SNM. Tryb wzorowany na NVDA mnoży zwykłą prędkość przez trzy,
 a dotychczasowy przyspiesza tylko górne dodatnie poziomy SAPI. Nowe ustawienia
-domyślnie wybierają tryb płynny i włączony rozszerzony zakres. Dotychczasowy
+domyślnie wybierają tryb płynny i wyłączony rozszerzony zakres. Dodanie głosu
+korzysta z zapisanego ustawienia instalacji i nie resetuje wyboru. Dotychczasowy
 zapisany tryb i stan pola wyboru pozostają zachowane. Wyłączenie rozszerzonego
 zakresu przywraca zwykłą regulację prędkości eSpeak.
 
@@ -110,15 +112,21 @@ albo x86. Instalator nie zawiera runtime; przy jego braku standardowy host
 
 `../Vario.Tests` exercises INI persistence and legacy migration, locale
 selection, themes, optional accessibility hints and preservation of pending
-UI edits. It uses an isolated test voice registry and never changes SAPI. Pass a
-new fixture directory inside the repository's ignored Workspace for each run.
+UI edits. Real window handles and a message pump also verify checkbox MSAA/UIA
+events, native partial tree states, focus, navigation and handle recreation.
+It uses an isolated test voice registry and never changes SAPI. Pass a new fixture
+directory under the central Workspace category for each run.
 These checks do not replace real NVDA or installed-SAPI audio validation.
 
 `../Vario.Tests` sprawdza zapis INI, migrację, wybór języka, motywy, opcjonalne
-opisy dostępności i zachowanie niezapisanych zmian. Używa izolowanego rejestru
-testowego i nie zmienia SAPI. Każde uruchomienie wymaga nowego katalogu próbek wewnątrz
-ignorowanego Workspace projektu. Testy nie zastępują odsłuchu SAPI ani NVDA.
+opisy dostępności i zachowanie niezapisanych zmian. Rzeczywiste uchwyty okien
+i pompa komunikatów sprawdzają zdarzenia MSAA/UIA pola wyboru, stany częściowe
+drzew, fokus, nawigację i odtworzenie uchwytu. Używa izolowanego rejestru
+testowego i nie zmienia SAPI. Każde uruchomienie wymaga nowego katalogu próbek
+w centralnej kategorii Workspace. Testy nie zastępują odsłuchu SAPI ani NVDA.
 
 ```powershell
-dotnet run --project platforms/windows/Vario.Tests -c Release -r win-x64 -- . Workspace/vario-test-run pl-PL
+. ./project_materials.ps1
+$fixtures = Join-ProjectMaterialPath (Get-Location).Path 'Workspace/vario-test-run'
+dotnet run --project platforms/windows/Vario.Tests -c Release -r win-x64 -- . $fixtures pl-PL
 ```

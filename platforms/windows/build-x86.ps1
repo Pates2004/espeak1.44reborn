@@ -114,8 +114,8 @@ Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'platforms\windows
 Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'License.txt') -Destination $resolvedStage
 
 if (-not $SkipInstaller) {
-    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r36.exe')) {
-        throw 'Archive the existing r36 installer in snapshots before replacing it.'
+    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r37.exe')) {
+        throw 'Archive the existing r37 installer in snapshots before replacing it.'
     }
     $isccCandidates = @(
         (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
@@ -137,5 +137,5 @@ if (-not $SkipInstaller) {
 Write-Host "Binaries: $releaseDir"
 Write-Host "Package:  $resolvedStage"
 if (-not $SkipInstaller) {
-    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r36.exe')"
+    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r37.exe')"
 }

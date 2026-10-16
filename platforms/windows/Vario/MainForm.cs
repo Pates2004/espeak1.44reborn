@@ -41,7 +41,7 @@ internal sealed class MainForm : Form
         Width = 90
     };
     private readonly Label inflectionVoiceLabel = new() { AutoSize = true };
-    private readonly CheckBox sonicCheck = new() { AutoSize = true };
+    private readonly AccessibleCheckBox sonicCheck = new() { AutoSize = true };
     private readonly RadioButton sonicModeNvda = new() { AutoSize = true };
     private readonly RadioButton sonicModeLegacy = new() { AutoSize = true };
     private readonly RadioButton sonicModeSmooth = new() { AutoSize = true };
@@ -364,8 +364,8 @@ internal sealed class MainForm : Form
             englishLanguageItem.Checked = preferences.Language == AppLanguage.English;
             polishLanguageItem.Checked = preferences.Language == AppLanguage.Polish;
             showHintsItem.Checked = preferences.ShowHints;
-            availableTree.AccessibleName = UiText.AvailableGroup;
-            installedTree.AccessibleName = UiText.InstalledGroup;
+            availableTree.SetAccessibleLabel(UiText.AvailableGroup);
+            installedTree.SetAccessibleLabel(UiText.InstalledGroup);
             availableHelp.Visible = preferences.ShowHints;
             installedHelp.Visible = preferences.ShowHints;
             availableTree.ShowNodeToolTips = preferences.ShowHints;
@@ -477,6 +477,7 @@ internal sealed class MainForm : Form
         }
         finally
         {
+            availableTree.RestoreCheckStates();
             availableTree.EndUpdate();
         }
     }
@@ -502,6 +503,7 @@ internal sealed class MainForm : Form
         }
         finally
         {
+            installedTree.RestoreCheckStates();
             installedTree.EndUpdate();
         }
     }

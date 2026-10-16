@@ -45,7 +45,7 @@ inline SpeedSettings ResolveSpeedSettings(const wchar_t* boost, const wchar_t* m
                                          const LegacySpeedSettings& legacy)
 {
     const bool migrate = (boost[0] == L'\0' || mode[0] == L'\0') && legacy.present;
-    SpeedSettings result = {migrate ? legacy.boost : true,
+    SpeedSettings result = {migrate && legacy.boost,
         migrate ? (legacy.mode <= 2 ? legacy.mode : 1) : 2};
     if (wcscmp(boost, L"0") == 0) result.boost = false;
     else if (wcscmp(boost, L"1") == 0) result.boost = true;

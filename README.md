@@ -1,17 +1,32 @@
-> Local build and assistant materials were moved to `D:\work\espeak-1.44.05-source\espeak1.44reborn`. Paths beginning with `installfiles`, `Workspace`, `snapshots`, `trash` or `Forme` below refer to that central directory; source paths remain relative to this checkout. Use `C:\work` only if drive D: does not exist.
+> Current installers are in this checkout's `installfiles`. Build and useful diagnostic files are in `D:\work\Workspace\espeak1.44reborn`; audits in `D:\work\Forme\espeak1.44reborn`, previous builds in `D:\work\Snapshots\espeak1.44reborn`, and disposable files in `D:\work\Trash\espeak1.44reborn`. Scripts resolve these category paths automatically. Use `C:\work` only if drive D: does not exist.
 
-# eSpeak 1.44.05 Reborn — r36 (32-bit)
+# eSpeak 1.44.05 Reborn — r37 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r36 project:
+eSpeak r37 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r36` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r37` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
+
+## Release r37 / Wydanie r37
+
+Vario announces real checkbox state changes for both the speed checkbox and
+three-state voice trees. Native tree navigation, localized root labels and optional
+hints are retained. Sonic is now off for fresh settings; existing saved choices
+and legacy settings are preserved. The selected speed mode remains available.
+In Polish punctuation, ASCII `-` is named "minus". Bracket names are unchanged.
+
+Vario udostępnia czytnikom ekranu rzeczywiste zmiany zaznaczenia pola szybkości
+oraz trójstanowych drzew głosów. Zachowano zwykłą nawigację drzewa, tłumaczone
+etykiety i opcjonalne podpowiedzi. Sonic jest domyślnie wyłączony przy nowych
+ustawieniach; zapisane wybory i starsze ustawienia pozostają zachowane. Wybrany
+tryb szybkości pozostaje dostępny. Znak ASCII `-` ma nazwę „minus”; nawiasów
+nie zmieniono.
 
 ## Release r36 / Wydanie r36
 

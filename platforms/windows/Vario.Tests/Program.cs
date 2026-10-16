@@ -10,9 +10,9 @@ internal static class Program
     [STAThread]
     private static int Main(string[] arguments)
     {
-        if (arguments.Length != 3)
+        if (arguments.Length is not (3 or 4))
         {
-            Console.Error.WriteLine("Usage: Vario.Tests <repository> <fixture-directory> <UI-culture>");
+            Console.Error.WriteLine("Usage: Vario.Tests <repository> <fixture-directory> <UI-culture> [--record-accessibility|--accessibility-only]");
             return 2;
         }
         try
@@ -23,10 +23,16 @@ internal static class Program
             Application.SetCompatibleTextRenderingDefault(false);
             string fixtures = Path.GetFullPath(arguments[1]);
             Directory.CreateDirectory(fixtures);
+            if (arguments.Length == 4 && arguments[3] is "--record-accessibility" or "--accessibility-only")
+            {
+                AccessibilityTests.Run(fixtures, recordOnly: arguments[3] == "--record-accessibility");
+                return 0;
+            }
             TestSettings(fixtures);
             TestLanguageSelection(arguments[2]);
             Check(Directory.Exists(Path.Combine(Path.GetFullPath(arguments[0]), "espeak-data", "voices")), "The repository contains voice definitions.");
             TestPendingUi(fixtures);
+            AccessibilityTests.Run(fixtures);
             Console.WriteLine($"PASS: {assertions} assertions, culture {arguments[2]}; no SAPI registry writes.");
             return 0;
         }
@@ -42,7 +48,7 @@ internal static class Program
         SettingsStore fresh = Store(fixtures, "fresh", new(false, false, SonicMode.Nvda));
         LoadedSettings initial = fresh.Load();
         Check(initial.NeedsInitialization && !initial.MigratedLegacy, "Fresh configuration needs initialization.");
-        Check(initial.Value.SonicBoost && initial.Value.SonicMode == SonicMode.Smooth, "Fresh configuration uses enabled smooth mode.");
+        Check(!initial.Value.SonicBoost && initial.Value.SonicMode == SonicMode.Smooth, "Fresh configuration retains smooth mode with Sonic disabled.");
         Check(initial.Value.Theme == AppTheme.Light && initial.Value.Language == AppLanguage.System && initial.Value.ShowHints,
             "Fresh interface defaults.");
         fresh.Save(initial.Value);
@@ -50,6 +56,8 @@ internal static class Program
         Check(bytes.Length >= 2 && bytes[0] == 0xff && bytes[1] == 0xfe, "Settings are UTF-16LE with a BOM.");
         Check(fresh.Load().Value == initial.Value && !fresh.Load().NeedsInitialization, "Settings round trip through native INI API.");
         Check(Directory.GetFiles(Path.GetDirectoryName(fresh.FilePath)!).Length == 1, "No transactional temporary file remains.");
+        fresh.Save(initial.Value with { SonicBoost = true });
+        Check(fresh.Load().Value.SonicBoost, "An explicitly enabled Sonic preference survives loading.");
 
         foreach (SonicMode mode in new[] { SonicMode.Legacy, SonicMode.Nvda })
         foreach (bool boost in new[] { false, true })
@@ -135,7 +143,7 @@ internal static class Program
             "Pending voice values are not reloaded.");
         Check(Field<RadioButton>(form, "sonicModeLegacy").Checked && !Field<CheckBox>(form, "sonicCheck").Checked,
             "Pending speed controls survive preference changes.");
-        Check(store.Load().Value.SonicMode == SonicMode.Smooth && store.Load().Value.SonicBoost,
+        Check(store.Load().Value.SonicMode == SonicMode.Smooth && !store.Load().Value.SonicBoost,
             "Interface changes do not prematurely apply pending speed settings.");
         Check(form.Text.Contains("menedżer") && installedVoice.Text.Contains("modulacja"), "Dynamic UI text changes language.");
         Check(!installed.ShowNodeToolTips && modulation.AccessibleDescription == string.Empty && installedVoice.ToolTipText == string.Empty,
