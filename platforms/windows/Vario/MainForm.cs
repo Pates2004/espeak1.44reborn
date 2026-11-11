@@ -6,6 +6,7 @@ internal sealed class MainForm : Form
 
     private readonly IVoiceRegistry registry;
     private readonly SettingsStore settingsStore;
+    private readonly Action<string> showError;
     private VarioSettings preferences;
     private readonly MenuStrip settingsMenu = new();
     private readonly ToolStripMenuItem settingsMenuItem = new();
@@ -46,6 +47,7 @@ internal sealed class MainForm : Form
     private readonly RadioButton sonicModeLegacy = new() { AutoSize = true };
     private readonly RadioButton sonicModeSmooth = new() { AutoSize = true };
     private readonly AnnouncingLabel statusLabel = new() { AutoSize = false, AutoEllipsis = true };
+    private readonly Button applyButton = new() { AutoSize = true, TabIndex = 9, Enabled = false };
 
     private IReadOnlyList<string> catalogVoices = Array.Empty<string>();
     private IReadOnlyList<string> catalogVariants = Array.Empty<string>();
@@ -58,16 +60,26 @@ internal sealed class MainForm : Form
     private bool updatingInflection;
     private bool dirty;
     private bool allowClose;
+    private bool hasLoadedState;
+    private string baselineSettingsRevision = string.Empty;
 
-    internal MainForm(IVoiceRegistry? registry = null, SettingsStore? settingsStore = null)
+    internal MainForm(IVoiceRegistry? registry = null, SettingsStore? settingsStore = null,
+        Action<string>? showError = null)
     {
         this.registry = registry ?? new RegistryService();
         this.settingsStore = settingsStore ?? new SettingsStore(AppContext.BaseDirectory, this.registry.ReadLegacySpeedSettings);
-        LoadedSettings loadedSettings = this.settingsStore.Load();
+        this.showError = showError ?? (message => MessageBox.Show(this, message, UiText.Warning,
+            MessageBoxButtons.OK, MessageBoxIcon.Error));
+        LoadedSettings loadedSettings;
+        using (this.settingsStore.AcquireChangeLock())
+        {
+            loadedSettings = this.settingsStore.Load();
+            if (loadedSettings.NeedsInitialization)
+                this.settingsStore.Save(loadedSettings.Value);
+            baselineSettingsRevision = this.settingsStore.GetRevision();
+        }
         preferences = loadedSettings.Value;
         UiText.SetLanguage(preferences.Language);
-        if (loadedSettings.NeedsInitialization)
-            this.settingsStore.Save(preferences);
         Text = UiText.Title;
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(840, 680);
@@ -251,7 +263,7 @@ internal sealed class MainForm : Form
         };
         Button closeButton = new() { Text = UiText.Close, AutoSize = true, TabIndex = 11 };
         Button reloadButton = new() { Text = UiText.Reload, AutoSize = true, TabIndex = 10 };
-        Button applyButton = new() { Text = UiText.Apply, AutoSize = true, TabIndex = 9 };
+        applyButton.Text = UiText.Apply;
         closeButton.Click += (_, _) => { allowClose = !dirty || Confirm(UiText.ConfirmClose); if (allowClose) Close(); };
         reloadButton.Click += (_, _) => { if (!dirty || Confirm(UiText.ConfirmReload)) LoadData(); };
         applyButton.Click += (_, _) => ApplyChanges();
@@ -327,15 +339,17 @@ internal sealed class MainForm : Form
     {
         try
         {
-            settingsStore.Save(updatedPreferences);
+            using IDisposable installationLock = settingsStore.AcquireChangeLock();
+            if (settingsStore.GetRevision() != baselineSettingsRevision)
+                throw new InvalidOperationException(UiText.InstallationChanged);
+            baselineSettingsRevision = settingsStore.Save(updatedPreferences);
             preferences = updatedPreferences;
             RefreshInterfacePreferences();
             SetStatus(UiText.PreferencesSaved);
         }
         catch (Exception exception)
         {
-            MessageBox.Show(this, UiText.PreferencesSaveFailed(settingsStore.FilePath) +
-                Environment.NewLine + exception.Message, UiText.Warning, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            showError(UiText.PreferencesSaveFailed(settingsStore.FilePath) + Environment.NewLine + exception.Message);
         }
     }
 
@@ -400,15 +414,22 @@ internal sealed class MainForm : Form
     private void LoadData()
     {
         loading = true;
+        hasLoadedState = false;
+        applyButton.Enabled = false;
         try
         {
+            using IDisposable installationLock = settingsStore.AcquireChangeLock();
             var available = registry.DiscoverAvailableVoices();
+            VoiceConfiguration[] installed = registry.ReadInstalledVoices().ToArray();
+            VarioSettings loadedPreferences = settingsStore.Load().Value;
+            string loadedSettingsRevision = settingsStore.GetRevision();
+            // Do not destroy the last working list if a later read fails.
             catalogVoices = available.Voices;
             catalogVariants = available.Variants;
 
             pendingOrder.Clear();
             pendingInflections.Clear();
-            foreach (VoiceConfiguration voice in registry.ReadInstalledVoices())
+            foreach (VoiceConfiguration voice in installed)
             {
                 if (pendingInflections.ContainsKey(voice.Name))
                     continue;
@@ -417,7 +438,8 @@ internal sealed class MainForm : Form
             }
 
             baselineInflections = new Dictionary<string, int>(pendingInflections, StringComparer.OrdinalIgnoreCase);
-            preferences = settingsStore.Load().Value;
+            preferences = loadedPreferences;
+            baselineSettingsRevision = loadedSettingsRevision;
             RefreshInterfacePreferences();
             baselineSonic = preferences.SonicBoost;
             baselineSonicMode = preferences.SonicMode;
@@ -427,13 +449,14 @@ internal sealed class MainForm : Form
             sonicModeLegacy.Checked = baselineSonicMode == SonicMode.Legacy;
             RebuildTrees();
             dirty = false;
+            hasLoadedState = true;
+            applyButton.Enabled = true;
             SetStatus(UiText.Ready);
         }
         catch (Exception ex)
         {
             SetStatus(UiText.LoadFailed + " " + ex.Message);
-            MessageBox.Show(this, UiText.LoadFailed + Environment.NewLine + ex.Message, UiText.Warning,
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            showError(UiText.LoadFailed + Environment.NewLine + ex.Message);
         }
         finally
         {
@@ -643,6 +666,12 @@ internal sealed class MainForm : Form
 
     private void ApplyChanges()
     {
+        if (!hasLoadedState)
+        {
+            SetStatus(UiText.ReloadBeforeApply);
+            showError(UiText.ReloadBeforeApply);
+            return;
+        }
         try
         {
             VoiceConfiguration[] voices = pendingOrder
@@ -654,8 +683,9 @@ internal sealed class MainForm : Form
                 SonicBoost = sonicCheck.Checked,
                 SonicMode = SelectedSonicMode
             };
-            registry.Apply(voices);
-            settingsStore.Save(updatedPreferences);
+            VoiceConfiguration[] baseline = baselineInflections.Select(pair => new VoiceConfiguration(pair.Key, pair.Value)).ToArray();
+            baselineSettingsRevision = InstallationChanges.Apply(registry, settingsStore, baseline,
+                baselineSettingsRevision, voices, updatedPreferences);
             preferences = updatedPreferences;
             baselineInflections = new Dictionary<string, int>(pendingInflections, StringComparer.OrdinalIgnoreCase);
             baselineSonic = sonicCheck.Checked;
@@ -665,9 +695,13 @@ internal sealed class MainForm : Form
         }
         catch (Exception ex)
         {
+            if (ex is AggregateException)
+            {
+                hasLoadedState = false;
+                applyButton.Enabled = false;
+            }
             SetStatus(UiText.SaveFailed + " " + ex.Message);
-            MessageBox.Show(this, UiText.SaveFailed + Environment.NewLine + ex.Message, UiText.Warning,
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            showError(UiText.SaveFailed + Environment.NewLine + ex.Message);
         }
     }
 

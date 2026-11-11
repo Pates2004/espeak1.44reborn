@@ -1,17 +1,47 @@
 > Current installers are in this checkout's `installfiles`. Build and useful diagnostic files are in `D:\work\Workspace\espeak1.44reborn`; audits in `D:\work\Forme\espeak1.44reborn`, previous builds in `D:\work\Snapshots\espeak1.44reborn`, and disposable files in `D:\work\Trash\espeak1.44reborn`. Scripts resolve these category paths automatically. Use `C:\work` only if drive D: does not exist.
 
-# eSpeak 1.44.05 Reborn — r37 (32-bit)
+# eSpeak 1.44.05 Reborn — r38 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r37 project:
+eSpeak r38 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r37` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r38` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
+
+## Release r38 / Wydanie r38
+
+Vario blocks Apply until the installation has loaded successfully. It prepares
+the INI before changing SAPI voices and restores its previous registry entries
+when a recoverable save fails. Conflicting edits from another Vario instance
+in the same Windows session require a reload. Voice gender metadata now follows
+the installed voice/variant definitions. The Windows CLI writes binary WAV to
+`--stdout`, preserving PCM bytes in pipes. Sonic remains off for fresh settings.
+
+Vario blokuje Zastosuj do poprawnego odczytu instalacji. Przygotowuje INI przed
+zmianą głosów SAPI i przywraca poprzednie własne wpisy rejestru po obsługiwalnym
+błędzie zapisu. Konflikt z inną instancją Vario w tej samej sesji Windows wymaga
+odświeżenia. Płeć głosu pochodzi z definicji głosu/wariantu. Windowsowe `--stdout`
+zapisuje binarny WAV bez zniekształcania bajtów PCM. Sonic w nowych ustawieniach
+pozostaje wyłączony.
+
+The default Polish dictionary corrects the soft affricate in numeric 30/40/200,
+uses mo-NI-ka and careful stress in MU-zyka/MI-nimum and the reviewed noun
+group. The complete alternative [mydict](mydict/README.md) retains the previous
+number sound and regular penultimate stress, such as mu-ZY-ka/mi-NI-mum.
+20 and 300 remain unchanged. Both accepted kolaż preferences are documented
+there. Installers use the default; no separate engine is needed.
+
+Domyślny polski słownik poprawia miękką afrykatę w liczbach 30/40/200, używa
+mo-NI-ka i akcentu wzorcowego w MU-zyka/MI-nimum oraz omawianej grupie
+rzeczowników. Pełny alternatywny [mydict](mydict/README.pl.md) zachowuje starsze
+brzmienie liczb i regularny akcent przedostatni, np. mu-ZY-ka/mi-NI-mum.
+20 i 300 pozostają bez zmian. Instrukcja opisuje też dwa zaakceptowane warianty
+akcentu kolażu. Instalator używa wersji domyślnej, bez osobnego silnika.
 
 ## Release r37 / Wydanie r37
 

@@ -1,5 +1,19 @@
-eSpeak 1.44.05 r37 - Windows 32-bit (x86)
+eSpeak 1.44.05 r38 - Windows 32-bit (x86)
 ====================================
+
+r38: Vario blocks Apply after a failed load, prepares settings before changing
+voices and rolls its registry entries back on a recoverable save failure.
+Concurrent edits in the same Windows session require a reload. Voice gender
+comes from voice/variant definitions. The CLI writes raw binary PCM to stdout.
+Sonic remains off for new settings. See mydict in the source repository for
+the alternative complete Polish dictionary.
+
+r38: Vario blokuje Zastosuj po błędzie odczytu, przygotowuje ustawienia przed
+zmianą głosów i przywraca własne wpisy rejestru po obsługiwalnym błędzie zapisu.
+Równoległe zmiany w tej samej sesji Windows wymagają odświeżenia. Płeć głosu
+pochodzi z definicji głosu/wariantu. CLI zapisuje binarny PCM do stdout.
+Sonic pozostaje wyłączony w nowych ustawieniach. Alternatywny pełny polski
+słownik znajduje się w mydict w repozytorium źródłowym.
 
 r37: Vario publishes checkbox state changes and native partial tree selections.
 Fresh settings have Sonic disabled; explicit existing choices are retained.

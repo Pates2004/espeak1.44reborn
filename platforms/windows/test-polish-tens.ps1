@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$EspeakExe,
-    [Parameter(Mandatory = $true)][string]$DataPath
+    [Parameter(Mandatory = $true)][string]$DataPath,
+    [switch]$LegacyNumbers
 )
 
 $ErrorActionPreference = 'Stop'
@@ -59,10 +60,11 @@ function Get-TensExpectation([int]$Number) {
         throw "Number outside the bounded Polish tens test: $Number"
     }
 
-    # The user selected the supplied legacy BOY numeric realization (c;), while
-    # written words retain their existing ts; realization from the same source.
-    # Both paths keep primary stress on DZIE and an unstressed final vowel.
-    $numericHead = if ($Number -lt 40) { "tSydz;'ES;c;i" } else { "tStERdz;'ES;c;i" }
+    # The optional complete dictionary preserves the earlier numeric c; sound.
+    # The default now uses the same soft affricate as written number words.
+    # Both paths retain DZIE stress and an unstressed final vowel.
+    $ending = if ($LegacyNumbers) { 'c;i' } else { 'ts;i' }
+    $numericHead = if ($Number -lt 40) { "tSydz;'ES;" + $ending } else { "tStERdz;'ES;" + $ending }
     $writtenHead = if ($Number -lt 40) { "tSydz;'ES;ts;i" } else { "tStERdz;'ES;ts;i" }
     $units = @(
         '', "j'EdEn", "dv'a", "tS'y", "tSt'ERy", "p;'En^ts;",

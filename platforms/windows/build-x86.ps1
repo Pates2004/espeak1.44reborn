@@ -63,6 +63,9 @@ if ($LASTEXITCODE -ne 0) {
     throw 'The Polish dictionary compilation failed.'
 }
 
+# Keep the alternative number/stress dictionary bound to this release.
+& (Join-Path $projectRoot 'mydict\rebuild.ps1') -VerifyOnly
+
 if (-not $SkipTests) {
     & (Join-Path $PSScriptRoot 'test-polish-numbers.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
     & (Join-Path $PSScriptRoot 'test-long-input.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
@@ -72,6 +75,10 @@ if (-not $SkipTests) {
     & (Join-Path $PSScriptRoot 'test-polish-pronunciation.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
     & (Join-Path $PSScriptRoot 'test-polish-tens.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
     & (Join-Path $PSScriptRoot 'test-polish-symbols.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
+    & (Join-Path $PSScriptRoot 'test-stdout-wav.ps1') -Exe $espeakExe -DataPath $projectRoot `
+        -OutputDirectory (Join-ProjectMaterialPath $projectRoot ('Workspace\stdout-wav\' + [Guid]::NewGuid().ToString('N')))
+    & (Join-Path $PSScriptRoot 'test-installer-gender.ps1') `
+        -OutputDirectory (Join-ProjectMaterialPath $projectRoot ('Workspace\installer-gender\' + [Guid]::NewGuid().ToString('N')))
 
     $wavPath = Join-Path $releaseDir 'smoke-pl.wav'
     & $espeakExe --path=$projectRoot -v pl -w $wavPath '32-bit synthesis test.'
@@ -114,8 +121,8 @@ Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'platforms\windows
 Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'License.txt') -Destination $resolvedStage
 
 if (-not $SkipInstaller) {
-    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r37.exe')) {
-        throw 'Archive the existing r37 installer in snapshots before replacing it.'
+    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r38.exe')) {
+        throw 'Classify the existing r38 installer before replacing it.'
     }
     $isccCandidates = @(
         (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
@@ -137,5 +144,5 @@ if (-not $SkipInstaller) {
 Write-Host "Binaries: $releaseDir"
 Write-Host "Package:  $resolvedStage"
 if (-not $SkipInstaller) {
-    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r37.exe')"
+    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r38.exe')"
 }

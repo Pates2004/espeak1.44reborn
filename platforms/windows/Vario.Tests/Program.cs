@@ -12,7 +12,7 @@ internal static class Program
     {
         if (arguments.Length is not (3 or 4))
         {
-            Console.Error.WriteLine("Usage: Vario.Tests <repository> <fixture-directory> <UI-culture> [--record-accessibility|--accessibility-only]");
+            Console.Error.WriteLine("Usage: Vario.Tests <repository> <fixture-directory> <UI-culture> [--record-accessibility|--accessibility-only|--failure-tests-only]");
             return 2;
         }
         try
@@ -23,6 +23,14 @@ internal static class Program
             Application.SetCompatibleTextRenderingDefault(false);
             string fixtures = Path.GetFullPath(arguments[1]);
             Directory.CreateDirectory(fixtures);
+            if (arguments.Length == 4 && arguments[3] == "--failure-tests-only")
+            {
+                FailureAndMetadataTests.Run(Path.GetFullPath(arguments[0]), fixtures, Check);
+                Console.WriteLine($"PASS: {assertions} failure/metadata assertions, culture {arguments[2]}; no SAPI registry writes.");
+                return 0;
+            }
+            if (arguments.Length == 4 && arguments[3] is not ("--record-accessibility" or "--accessibility-only"))
+                throw new ArgumentException("Unknown test mode.");
             if (arguments.Length == 4 && arguments[3] is "--record-accessibility" or "--accessibility-only")
             {
                 AccessibilityTests.Run(fixtures, recordOnly: arguments[3] == "--record-accessibility");
@@ -32,6 +40,7 @@ internal static class Program
             TestLanguageSelection(arguments[2]);
             Check(Directory.Exists(Path.Combine(Path.GetFullPath(arguments[0]), "espeak-data", "voices")), "The repository contains voice definitions.");
             TestPendingUi(fixtures);
+            FailureAndMetadataTests.Run(Path.GetFullPath(arguments[0]), fixtures, Check);
             AccessibilityTests.Run(fixtures);
             Console.WriteLine($"PASS: {assertions} assertions, culture {arguments[2]}; no SAPI registry writes.");
             return 0;
@@ -168,6 +177,7 @@ internal static class Program
         public (IReadOnlyList<string> Voices, IReadOnlyList<string> Variants) DiscoverAvailableVoices() =>
             (new[] { "en", "pl" }, new[] { "m1", "f1" });
         public LegacySpeedSettings ReadLegacySpeedSettings() => new(false, false, SonicMode.Nvda);
+        public IVoiceRegistrySnapshot CaptureSnapshot() => throw new InvalidOperationException("This UI fixture must not prepare registration changes.");
         public void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices) =>
             throw new InvalidOperationException("The UI regression must not apply voice registration.");
         public void Dispose() { }

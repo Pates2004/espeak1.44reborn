@@ -83,6 +83,21 @@ internal static class UiText
         "Vario could not read this eSpeak installation.",
         "Vario nie może odczytać tej instalacji eSpeak.");
     internal static string SaveFailed => Pick("The changes could not be saved.", "Nie udało się zapisać zmian.");
+    internal static string SettingsWriteFailed => Pick(
+        "The prepared settings could not be verified. No SAPI voices were changed.",
+        "Nie udało się zweryfikować przygotowanych ustawień. Nie zmieniono głosów SAPI.");
+    internal static string ReloadBeforeApply => Pick(
+        "Reload this installation successfully before applying changes. No SAPI voices were changed.",
+        "Przed zastosowaniem zmian odśwież poprawnie dane instalacji. Nie zmieniono głosów SAPI.");
+    internal static string InstallationChanged => Pick(
+        "The installation was changed by another operation. Reload it before saving; no pending changes were applied.",
+        "Inna operacja zmieniła instalację. Przed zapisem odśwież dane; nie zastosowano oczekujących zmian.");
+    internal static string InstallationBusy => Pick(
+        "Another Vario operation is changing this SAPI installation. Try again after it finishes.",
+        "Inna operacja Vario zmienia tę instalację SAPI. Spróbuj ponownie po jej zakończeniu.");
+    internal static string RollbackFailed => Pick(
+        "Saving failed and the previous SAPI state could not be fully restored. Reload and verify the installed voices before continuing.",
+        "Zapis się nie powiódł i nie udało się w pełni przywrócić poprzedniego stanu SAPI. Przed dalszą pracą odśwież dane i sprawdź zainstalowane głosy.");
     internal static string ConfirmReload => Pick(
         "Discard changes that have not been applied?",
         "Odrzucić zmiany, które nie zostały zastosowane?");

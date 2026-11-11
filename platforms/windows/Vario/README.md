@@ -51,6 +51,17 @@ reported; there is no AppData fallback. SAPI voice registration remains in
 the Windows registry because that is the operating system's voice interface.
 SAPI applications may need to be restarted after applying changes.
 
+Apply is disabled until the installation is read successfully. Saving prepares
+and verifies the complete INI before any SAPI changes, snapshots only this
+engine's voice tokens and phone converter, then publishes the INI after the
+registry update. Recoverable failures restore the snapshot; a failed recovery
+is reported explicitly and requires a reload. This does not provide recovery
+from process termination or power loss. A short session-local lock and loaded
+state comparison prevent conflicting edits by Vario instances in the same
+Windows session; this is not a lock across different user sessions.
+SAPI gender metadata follows the base voice and variant's declared gender,
+with an explicit variant declaration taking precedence over its base.
+
 Vario is published as a framework-dependent .NET 10 single-file Windows
 application. It requires .NET Desktop Runtime 10 matching the installed
 edition (x64 or x86); the runtime is not bundled in the installer. If the
@@ -103,6 +114,16 @@ w AppData. Systemowa rejestracja głosów SAPI pozostaje w rejestrze Windows.
 Po zastosowaniu zmian programy korzystające z SAPI mogą wymagać ponownego
 uruchomienia.
 
+Zastosuj jest nieaktywne do poprawnego odczytu instalacji. Zapis najpierw
+przygotowuje i weryfikuje cały INI, zapamiętuje wyłącznie własne tokeny głosów
+i konwerter fonemów, a po zmianie rejestru publikuje INI. Obsługiwalny błąd
+powoduje przywrócenie zapamiętanych wpisów; nieudane przywrócenie jest jawnie
+zgłaszane i wymaga odświeżenia. Nie jest to ochrona przed zamknięciem procesu
+lub utratą zasilania. Krótka blokada sesji i porównanie odczytanego stanu
+chronią przed sprzecznymi zmianami instancji Vario w tej samej sesji Windows;
+nie blokują innych sesji użytkowników. Płeć w metadanych SAPI pochodzi
+z definicji głosu i wariantu, z pierwszeństwem deklaracji wariantu.
+
 Vario jest jednoplikową aplikacją .NET 10 zależną od środowiska uruchomieniowego.
 Wymaga .NET Desktop Runtime 10 w architekturze zgodnej z wersją Vario: x64
 albo x86. Instalator nie zawiera runtime; przy jego braku standardowy host
@@ -118,12 +139,23 @@ It uses an isolated test voice registry and never changes SAPI. Pass a new fixtu
 directory under the central Workspace category for each run.
 These checks do not replace real NVDA or installed-SAPI audio validation.
 
+Failure regressions use a fake registry and actual isolated INI files. They
+cover failed loads, staging errors, partial registration, locked destination
+files, rollback failure, conflicting edits and lock exclusion. Metadata checks
+compare all declared variant genders and test base-voice inheritance.
+
 `../Vario.Tests` sprawdza zapis INI, migrację, wybór języka, motywy, opcjonalne
 opisy dostępności i zachowanie niezapisanych zmian. Rzeczywiste uchwyty okien
 i pompa komunikatów sprawdzają zdarzenia MSAA/UIA pola wyboru, stany częściowe
 drzew, fokus, nawigację i odtworzenie uchwytu. Używa izolowanego rejestru
 testowego i nie zmienia SAPI. Każde uruchomienie wymaga nowego katalogu próbek
 w centralnej kategorii Workspace. Testy nie zastępują odsłuchu SAPI ani NVDA.
+
+Testy błędów używają sztucznego rejestru i rzeczywistych izolowanych plików INI.
+Obejmują błędy odczytu i przygotowania pliku, częściowy zapis rejestracji,
+zablokowany plik docelowy, błąd przywracania, sprzeczne zmiany i blokadę zapisu.
+Metadane porównują wszystkie zadeklarowane płcie wariantów i dziedziczenie
+z głosu bazowego.
 
 ```powershell
 . ./project_materials.ps1

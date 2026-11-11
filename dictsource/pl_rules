@@ -184,6 +184,14 @@
 	_domin) i (ce_++ i
 	_domin) i (ki_++ i
 	_domin) i (ka_++ i
+	_mon) i (kom_++ i
+	_mon) i (kach_++ i
+	_mon) i (ko_++ i
+	_mon) i (ką_++ i
+	_mon) i (kę_++ i
+	_mon) i (ce_++ i
+	_mon) i (ki_++ i
+	_mon) i (ka_++ i
 	_weron) i (kom_++ i
 	_weron) i (kach_++ i
 	_weron) i (ko_++ i
@@ -649,6 +657,7 @@
 	@mat) y (L01_ =y
 	@mer) y (L01_ =y
 	@met) y (L01_ =y
+	@muz) y (L01_ =y
 	@net) y (L01_ =y
 	@nez) y (L01_ =y
 	@not) y (L01_ =y

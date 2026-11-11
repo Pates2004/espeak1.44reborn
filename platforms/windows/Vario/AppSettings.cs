@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Vario;
@@ -16,13 +17,21 @@ internal sealed class SettingsStore
 {
     private const string Section = "Settings";
     private readonly Func<LegacySpeedSettings> readLegacy;
+    private readonly string changeLockName;
     internal string FilePath { get; }
 
-    internal SettingsStore(string installationDirectory, Func<LegacySpeedSettings> readLegacy)
+    internal SettingsStore(string installationDirectory, Func<LegacySpeedSettings> readLegacy, string? changeLockName = null)
     {
         FilePath = Path.Combine(Path.GetFullPath(installationDirectory), "vario.ini");
         this.readLegacy = readLegacy;
+        this.changeLockName = changeLockName ?? (Environment.Is64BitProcess
+            ? @"Local\Pates2004.eSpeak.Vario.Registry64" : @"Local\Pates2004.eSpeak.Vario.Registry32");
     }
+
+    internal IDisposable AcquireChangeLock() => InstallationChangeLock.Acquire(changeLockName);
+
+    internal string GetRevision() => File.Exists(FilePath)
+        ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(FilePath))) : "missing";
 
     internal LoadedSettings Load()
     {
@@ -42,7 +51,15 @@ internal sealed class SettingsStore
         return new(settings, needsInitialization, needsInitialization && legacy.HasSettings);
     }
 
-    internal void Save(VarioSettings settings)
+    internal string Save(VarioSettings settings)
+    {
+        using IDisposable installationLock = AcquireChangeLock();
+        using PreparedSave prepared = PrepareSave(settings);
+        prepared.Commit();
+        return prepared.Revision;
+    }
+
+    internal PreparedSave PrepareSave(VarioSettings settings)
     {
         if (!Enum.IsDefined(settings.SonicMode))
             throw new ArgumentOutOfRangeException(nameof(settings), UiText.InvalidSonicMode);
@@ -56,31 +73,77 @@ internal sealed class SettingsStore
             using (FileStream stream = new(temporaryPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             using (StreamWriter writer = new(stream, Encoding.Unicode))
                 writer.Write(existing);
-            Write(temporaryPath, "SonicBoost", settings.SonicBoost ? "1" : "0");
-            Write(temporaryPath, "SonicMode", ((int)settings.SonicMode).ToString(CultureInfo.InvariantCulture));
-            Write(temporaryPath, "Theme", settings.Theme == AppTheme.Dark ? "dark" : "light");
-            Write(temporaryPath, "Language", settings.Language switch
+            Dictionary<string, string> values = new()
             {
-                AppLanguage.English => "en",
-                AppLanguage.Polish => "pl",
-                _ => "system"
-            });
-            Write(temporaryPath, "ShowHints", settings.ShowHints ? "1" : "0");
+                ["SonicBoost"] = settings.SonicBoost ? "1" : "0",
+                ["SonicMode"] = ((int)settings.SonicMode).ToString(CultureInfo.InvariantCulture),
+                ["Theme"] = settings.Theme == AppTheme.Dark ? "dark" : "light",
+                ["Language"] = settings.Language switch
+                {
+                    AppLanguage.English => "en",
+                    AppLanguage.Polish => "pl",
+                    _ => "system"
+                },
+                ["ShowHints"] = settings.ShowHints ? "1" : "0"
+            };
+            foreach ((string key, string value) in values)
+                Write(temporaryPath, key, value);
+            // A zero return is also documented for successful cache flushing.
             WritePrivateProfileStringW(null, null, null, temporaryPath);
-            File.Move(temporaryPath, FilePath, overwrite: true);
-            WritePrivateProfileStringW(null, null, null, FilePath);
+            foreach ((string key, string value) in values)
+                if (Read(temporaryPath, key) != value)
+                    throw new IOException(UiText.SettingsWriteFailed);
+            using (FileStream stream = new(temporaryPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+                stream.Flush(flushToDisk: true);
+            return new PreparedSave(temporaryPath, FilePath,
+                Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(temporaryPath))));
         }
-        finally
+        catch
         {
             if (File.Exists(temporaryPath))
                 File.Delete(temporaryPath);
+            throw;
         }
     }
 
-    private string Read(string key)
+    internal sealed class PreparedSave : IDisposable
+    {
+        private string? temporaryPath;
+        private readonly string targetPath;
+        internal string Revision { get; }
+
+        internal PreparedSave(string temporaryPath, string targetPath, string revision)
+        {
+            this.temporaryPath = temporaryPath;
+            this.targetPath = targetPath;
+            Revision = revision;
+        }
+
+        internal void Commit()
+        {
+            string source = temporaryPath ?? throw new ObjectDisposedException(nameof(PreparedSave));
+            // Source and target are siblings, so replacement stays on one volume.
+            File.Move(source, targetPath, overwrite: true);
+            temporaryPath = null;
+            // Only the unique staging file was written with the profile API;
+            // the target has no pending writes which could undo the rename.
+            WritePrivateProfileStringW(null, null, null, targetPath);
+        }
+
+        public void Dispose()
+        {
+            string? source = Interlocked.Exchange(ref temporaryPath, null);
+            if (source is not null && File.Exists(source))
+                File.Delete(source);
+        }
+    }
+
+    private string Read(string key) => Read(FilePath, key);
+
+    private static string Read(string path, string key)
     {
         StringBuilder value = new(1024);
-        GetPrivateProfileStringW(Section, key, string.Empty, value, (uint)value.Capacity, FilePath);
+        GetPrivateProfileStringW(Section, key, string.Empty, value, (uint)value.Capacity, path);
         return value.ToString();
     }
 

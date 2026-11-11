@@ -13,6 +13,7 @@ internal interface IVoiceRegistry : IDisposable
     IReadOnlyList<VoiceConfiguration> ReadInstalledVoices();
     (IReadOnlyList<string> Voices, IReadOnlyList<string> Variants) DiscoverAvailableVoices();
     LegacySpeedSettings ReadLegacySpeedSettings();
+    IVoiceRegistrySnapshot CaptureSnapshot();
     void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices);
 }
 
@@ -94,6 +95,9 @@ internal sealed class RegistryService : IVoiceRegistry
         return new(boost is not null || mode is not null, boost is int enabled && enabled != 0, parsedMode);
     }
 
+    public IVoiceRegistrySnapshot CaptureSnapshot() => RegistryStateSnapshot.Capture(machine,
+        VoicesKey, PhoneConvertersKey + @"\eSpeak", TokenNamePattern);
+
     public void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices)
     {
         VoiceConfiguration[] voices = requestedVoices
@@ -106,6 +110,8 @@ internal sealed class RegistryService : IVoiceRegistry
         if (voices.Any(value => value.Inflection is < 0 or > 100))
             throw new InvalidOperationException(UiText.InvalidInflection);
 
+        VoiceGenderCatalog genders = new(Path.Combine(AppContext.BaseDirectory, "espeak-data", "voices"));
+
         using RegistryKey tokens = machine.CreateSubKey(VoicesKey, writable: true)
             ?? throw new InvalidOperationException(UiText.VoiceRegistryUnavailable);
         string[] previousNames = GetManagedTokenNames(tokens).ToArray();
@@ -115,7 +121,7 @@ internal sealed class RegistryService : IVoiceRegistry
         {
             string keyName = index == 0 ? "eSpeak" : $"eSpeak_{index}";
             desiredNames.Add(keyName);
-            WriteVoiceToken(tokens, keyName, voices[index]);
+            WriteVoiceToken(tokens, keyName, voices[index], genders.Resolve(voices[index].Name));
             EnsurePhoneConverter(LanguageFromVoice(voices[index].Name));
         }
 
@@ -135,7 +141,7 @@ internal sealed class RegistryService : IVoiceRegistry
         return separator < 0 || !int.TryParse(name[(separator + 1)..], out int index) ? 0 : index;
     }
 
-    private static void WriteVoiceToken(RegistryKey tokens, string keyName, VoiceConfiguration configuration)
+    private static void WriteVoiceToken(RegistryKey tokens, string keyName, VoiceConfiguration configuration, string gender)
     {
         string voice = configuration.Name;
         using RegistryKey token = tokens.CreateSubKey(keyName, writable: true)
@@ -151,16 +157,10 @@ internal sealed class RegistryService : IVoiceRegistry
         using RegistryKey attributes = token.CreateSubKey("Attributes", writable: true)
             ?? throw new InvalidOperationException(UiText.CannotCreateVoiceAttributes(keyName));
         attributes.SetValue("Name", "eSpeak-" + voice, RegistryValueKind.String);
-        attributes.SetValue("Gender", VariantIsFemale(voice) ? "Female" : "Male", RegistryValueKind.String);
+        attributes.SetValue("Gender", gender, RegistryValueKind.String);
         attributes.SetValue("Age", "Adult", RegistryValueKind.String);
         attributes.SetValue("Language", LanguageFromVoice(voice), RegistryValueKind.String);
         attributes.SetValue("Vendor", "https://github.com/Pates2004", RegistryValueKind.String);
-    }
-
-    private static bool VariantIsFemale(string voice)
-    {
-        int plus = voice.LastIndexOf('+');
-        return plus >= 0 && plus + 1 < voice.Length && char.ToLowerInvariant(voice[plus + 1]) == 'f';
     }
 
     private void EnsurePhoneConverter(string languageCode)

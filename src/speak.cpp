@@ -31,6 +31,8 @@
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
 #include <winreg.h>
+#include <fcntl.h>
+#include <io.h>
 #else
 #include <unistd.h>
 #endif
@@ -268,7 +270,14 @@ static int OpenWaveFile(const char *path, int rate)
 		return(2);
 
 	if(strcmp(path,"stdout")==0)
+	{
+#ifdef PLATFORM_WINDOWS
+		// PCM must not pass through the CRT's text-mode LF translation.
+		if(_setmode(_fileno(stdout),_O_BINARY) == -1)
+			return(1);
+#endif
 		f_wave = stdout;
+	}
 	else
 		f_wave = fopen(path,"wb");
 

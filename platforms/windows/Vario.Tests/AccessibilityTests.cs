@@ -47,6 +47,7 @@ internal static class AccessibilityTests
         ConcurrentQueue<NativeEvent> nativeEvents = new();
         ConcurrentQueue<UiaEvent> uiaEvents = new();
         List<Observation> observations = new();
+        List<object> navigation = new();
         List<string> failures = new();
         WinEventDelegate callback = (_, eventId, window, objectId, childId, _, _) =>
         {
@@ -100,10 +101,50 @@ internal static class AccessibilityTests
                 {
                     OnUi(() =>
                     {
-                        control.Focus();
-                        SendMessage(control.Handle, 0x0100, (nint)key, (nint)1);
-                        SendMessage(control.Handle, 0x0101, (nint)key, unchecked((nint)(int)0xC0000001));
+                        bool focused = control.Focus();
+                        TreeView? tree = control as TreeView;
+                        string? before = tree?.SelectedNode?.Text;
+                        nint actualFocus = GetFocus();
+                        byte[] previous = new byte[256];
+                        if (!GetKeyboardState(previous)) throw new InvalidOperationException("Cannot read test-thread key state.");
+                        byte[] plain = (byte[])previous.Clone();
+                        foreach (int modifier in new[] { 0x10, 0x11, 0x12, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5 })
+                            plain[modifier] &= 0x7f;
+                        // SetKeyboardState affects only this UI thread. A user's
+                        // physical Ctrl key must not turn a scoped Down into Ctrl+Down.
+                        if (!SetKeyboardState(plain)) throw new InvalidOperationException("Cannot set test-thread key state.");
+                        try
+                        {
+                            SendMessage(control.Handle, 0x0100, (nint)key, (nint)1);
+                            SendMessage(control.Handle, 0x0101, (nint)key, unchecked((nint)(int)0xC0000001));
+                            navigation.Add(new { Key = key.ToString(), Control = control.AccessibleName,
+                                Window = control.Handle.ToInt64(), FocusAccepted = focused, Focus = actualFocus.ToInt64(),
+                                Foreground = GetForegroundWindow().ToInt64(), Form = form.Handle.ToInt64(),
+                                Before = before, After = tree?.SelectedNode?.Text,
+                                InheritedControlPressed = (previous[0x11] & 0x80) != 0,
+                                ControlPressed = (GetKeyState(0x11) & 0x8000) != 0,
+                                ShiftPressed = (GetKeyState(0x10) & 0x8000) != 0,
+                                AltPressed = (GetKeyState(0x12) & 0x8000) != 0 });
+                        }
+                        finally
+                        {
+                            if (!SetKeyboardState(previous)) throw new InvalidOperationException("Cannot restore test-thread key state.");
+                            byte[] restored = new byte[256];
+                            if (!GetKeyboardState(restored) || !restored.SequenceEqual(previous))
+                                throw new InvalidOperationException("Test-thread key state was not restored exactly.");
+                        }
                     });
+                }
+                void WaitFor(Func<bool> condition, string failure)
+                {
+                    Stopwatch deadline = Stopwatch.StartNew();
+                    bool ready = false;
+                    while (!ready && deadline.Elapsed < TimeSpan.FromSeconds(2))
+                    {
+                        OnUi(() => ready = condition());
+                        if (!ready) Thread.Sleep(20);
+                    }
+                    Require(ready, failure);
                 }
                 void Observe(string label, Control control, TreeNode? node, uint expectedState, bool expectEvent, bool expectUia)
                 {
@@ -190,11 +231,12 @@ internal static class AccessibilityTests
                     Require(focusEvents.Length == 1 && focusEvents[0].Name == parent.Nodes[0].Text,
                         $"{label}: child focus must announce exactly the child, without a repeated heading");
                     Keyboard(tree, Keys.Left);
-                    OnUi(() => Require(tree.SelectedNode == parent, $"{label}: Left did not return to the parent"));
+                    WaitFor(() => tree.SelectedNode == parent, $"{label}: Left did not return to the parent");
                     Keyboard(tree, Keys.Left);
-                    OnUi(() => Require(!parent.IsExpanded, $"{label}: Left did not collapse the parent"));
+                    WaitFor(() => !parent.IsExpanded, $"{label}: Left did not collapse the parent");
                     Keyboard(tree, Keys.Down);
-                    OnUi(() => Require(tree.SelectedNode == parent.NextNode || parent.NextNode is null, $"{label}: Down did not move between collapsed languages"));
+                    WaitFor(() => tree.SelectedNode == parent.NextNode || parent.NextNode is null,
+                        $"{label}: Down did not move between collapsed languages");
                     OnUi(() => { parent.Expand(); tree.SelectedNode = parent; });
                     OnUi(() => typeof(Control).GetMethod("RecreateHandle", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(tree, null));
                     Observe(label + "-recreated-on", tree, parent, CheckedState, false, false);
@@ -230,7 +272,7 @@ internal static class AccessibilityTests
         {
             Runtime = RuntimeInformation.FrameworkDescription,
             Architecture = RuntimeInformation.ProcessArchitecture.ToString(), Hints = hints,
-            Observations = observations, Failures = failures
+            Observations = observations, Navigation = navigation, Failures = failures
         }, new JsonSerializerOptions { WriteIndented = true }));
         if (!recordOnly && failures.Count != 0) throw new InvalidOperationException(string.Join(Environment.NewLine, failures));
     }
@@ -250,6 +292,7 @@ internal static class AccessibilityTests
         public IReadOnlyList<VoiceConfiguration> ReadInstalledVoices() => new[] { new VoiceConfiguration("en", 50), new VoiceConfiguration("en+f1", 50), new VoiceConfiguration("pl", 50) };
         public (IReadOnlyList<string> Voices, IReadOnlyList<string> Variants) DiscoverAvailableVoices() => (new[] { "en", "pl" }, new[] { "m1", "f1" });
         public LegacySpeedSettings ReadLegacySpeedSettings() => new(false, false, SonicMode.Smooth);
+        public IVoiceRegistrySnapshot CaptureSnapshot() => throw new InvalidOperationException("Accessibility checks must not prepare SAPI registration changes.");
         public void Apply(IReadOnlyList<VoiceConfiguration> requestedVoices) => throw new InvalidOperationException("Accessibility checks do not register SAPI voices.");
         public void Dispose() { }
     }
@@ -262,6 +305,18 @@ internal static class AccessibilityTests
     private static extern bool UnhookWinEvent(nint hook);
     [DllImport("user32.dll")]
     private static extern nint SendMessage(nint window, int message, nint parameter, nint value);
+    [DllImport("user32.dll")]
+    private static extern nint GetFocus();
+    [DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+    [DllImport("user32.dll")]
+    private static extern short GetKeyState(int key);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetKeyboardState([Out] byte[] state);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetKeyboardState(byte[] state);
     [DllImport("oleacc.dll")]
     private static extern int AccessibleObjectFromWindow(nint window, uint objectId, ref Guid interfaceId, [MarshalAs(UnmanagedType.Interface)] out object accessible);
     [DllImport("oleacc.dll")]

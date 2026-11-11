@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$EspeakExe,
-    [Parameter(Mandatory = $true)][string]$DataPath
+    [Parameter(Mandatory = $true)][string]$DataPath,
+    [switch]$AlternativeStress
 )
 
 $ErrorActionPreference = 'Stop'
@@ -9,6 +10,9 @@ $exePath = (Resolve-Path -LiteralPath $EspeakExe).Path
 $dataRoot = (Resolve-Path -LiteralPath $DataPath).Path
 $fixturePath = Join-Path $PSScriptRoot 'test-data\polish-pronunciation.tsv'
 $cases = @(Import-Csv -LiteralPath $fixturePath -Delimiter "`t" -Encoding UTF8)
+$stressFixture = Join-Path $PSScriptRoot '..\..\mydict\stress-cases.tsv'
+$stressCases = @(Import-Csv -LiteralPath $stressFixture -Delimiter "`t" -Encoding UTF8)
+$cases = if ($AlternativeStress) { $stressCases } else { $cases + $stressCases }
 if ($cases.Count -eq 0) {
     throw 'The Polish pronunciation fixture is empty.'
 }
@@ -55,12 +59,13 @@ function Get-PolishPhonemes([string]$Text) {
 }
 
 foreach ($case in $cases) {
-    if ([string]::IsNullOrWhiteSpace($case.Text) -or [string]::IsNullOrWhiteSpace($case.Expected)) {
+    $expected = if ($AlternativeStress) { $case.AlternativeExpected } else { $case.Expected }
+    if ([string]::IsNullOrWhiteSpace($case.Text) -or [string]::IsNullOrWhiteSpace($expected)) {
         throw 'The Polish pronunciation fixture contains an incomplete case.'
     }
     $phonemes = Get-PolishPhonemes $case.Text
-    if (-not $phonemes.Contains($case.Expected)) {
-        throw "Unexpected Polish pronunciation for '$($case.Text)': expected '$($case.Expected)', received '$phonemes'."
+    if (-not $phonemes.Contains($expected)) {
+        throw "Unexpected Polish pronunciation for '$($case.Text)': expected '$expected', received '$phonemes'."
     }
 }
 
