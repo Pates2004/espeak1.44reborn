@@ -11,7 +11,7 @@
 AppName=eSpeak
 AppId={{B0E0EE35-0C47-4C1A-A37D-82D12B0A6C32}
 AppVersion=1.44.05
-AppVerName=eSpeak version 1.44.05 r38 (32-bit)
+AppVerName=eSpeak version 1.44.05 r39 (32-bit)
 AppCopyright=Licensed under GNU General Public License version 3.   (See file License.txt for details).
 WizardStyle=modern
 LicenseFile=..\..\License.txt
@@ -21,14 +21,14 @@ ArchitecturesAllowed=x86compatible
 DefaultDirName={autopf}\eSpeak
 DefaultGroupName=eSpeak
 OutputDir={#InstallerDir}
-OutputBaseFilename=setup_espeak-1.44.05-x86-r38
+OutputBaseFilename=setup_espeak-1.44.05-x86-r39
 Compression=lzma2/ultra64
 SolidCompression=yes
 ShowLanguageDialog=auto
 UninstallDisplayIcon={app}\TTSApp.exe
-VersionInfoVersion=1.44.5.38
+VersionInfoVersion=1.44.5.39
 VersionInfoProductName=eSpeak
-VersionInfoDescription=eSpeak 1.44.05 r38 native 32-bit installer
+VersionInfoDescription=eSpeak 1.44.05 r39 native 32-bit installer
 
 [InstallDelete]
 Type: files; Name: "{app}\espeak.dll"
@@ -58,9 +58,6 @@ Name: "{group}\Vario - eSpeak voice manager (32-bit)"; Filename: "{app}\Vario.ex
 Name: "{group}\eSpeak documentation (32-bit)"; Filename: "{app}\docs\index.html"
 Name: "{group}\Uninstall eSpeak (32-bit)"; Filename: "{uninstallexe}"
 
-[Registry]
-Root: HKLM32; Subkey: "Software\Microsoft\Speech\PhoneConverters\Tokens\eSpeak"; Flags: deletekey uninsdeletekey
-
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
@@ -88,6 +85,9 @@ VarioPageDescription=Choose whether to install Vario before accepting the licens
 VarioPageSubcaption=Vario is an accessible manager for installed SAPI voices, variants, per-voice modulation and Sonic speed boost.
 InstallVario=Install Vario (recommended)
 GenderReadFailed=The voice definition could not be read: %1
+RegistrationFailed=The SAPI voice settings could not be updated.
+RegistrationRollbackFailed=The previous SAPI voice settings could not be fully restored. Run the installer again to repair the registration.
+TooManyRegistrationVoices=Select at most 200 SAPI voices.
 
 pl.v1=Wybierz głosy, które mają zostać zainstalowane
 pl.v2=lub naciśnij Enter, aby przyjąć wartości domyślne
@@ -97,6 +97,9 @@ pl.VarioPageDescription=Wybierz, czy zainstalować Vario przed zaakceptowaniem l
 pl.VarioPageSubcaption=Vario to dostępny menedżer zainstalowanych głosów SAPI, wariantów, modulacji dla poszczególnych głosów i przyspieszania Sonic.
 pl.InstallVario=Zainstaluj Vario (zalecane)
 pl.GenderReadFailed=Nie można odczytać definicji głosu: %1
+pl.RegistrationFailed=Nie można zaktualizować ustawień głosów SAPI.
+pl.RegistrationRollbackFailed=Nie udało się w pełni przywrócić poprzednich ustawień głosów SAPI. Uruchom instalator ponownie, aby naprawić rejestrację.
+pl.TooManyRegistrationVoices=Wybierz najwyżej 200 głosów SAPI.
 
 fr.v1=Sélectionnez les voix à installer
 fr.v2=ou appuyez sur Entrée pour accepter les valeurs par défaut.
@@ -112,13 +115,20 @@ var
   UIVoice: String;
   Page: TInputQueryWizardPage;
   VarioPage: TInputOptionWizardPage;
-  voices_installed: array [0..200] of String;
-  n_voices_installed: Integer;
 
 const
   sEspeak = 'eSpeak-';
   RegVoice1 = 'Software\Microsoft\Speech\Voices\Tokens\eSpeak';
   RegPhConv = 'Software\Microsoft\Speech\PhoneConverters\Tokens';
+  RegUninstall = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{B0E0EE35-0C47-4C1A-A37D-82D12B0A6C32}_is1';
+
+#include "voice-registration.iss"
+
+procedure ConfigureRegistration;
+begin
+  ConfigureVoiceRegistration(HKEY_LOCAL_MACHINE_32, HKEY_LOCAL_MACHINE, $200,
+    'Software\Microsoft\Speech\Voices\Tokens', RegPhConv + '\eSpeak');
+end;
 
 
 function VoiceFromLanguage(language: Integer): String;
@@ -287,124 +297,64 @@ begin
 end;
 
 
-// is the language number already in a PhoneConvertor ?
+// Use an installed converter when it already supports this exact language.
 function CheckPhoneConvertors(Lcode: String): Integer;
 var
   Convertors: TArrayOfString;
-  ix: Integer;
-  len: Integer;
-  s1: String;
-  s2: String;
-  sLangs: String;
+  Index: Integer;
+  Languages: String;
 begin
   Result := 0;
-  len := Length(Lcode);
-  if RegGetSubkeyNames(HKEY_LOCAL_MACHINE_32, RegPhConv, Convertors) then
-  begin
-    for ix := 0 to GetArrayLength(Convertors) - 1 do
-    begin
-      s1 := RegPhConv + '\' + Convertors[ix] + '\Attributes';
-      if RegQueryStringValue(HKEY_LOCAL_MACHINE_32, s1, 'Language', sLangs) then
-      begin
-        s2 := Copy(sLangs, 1, len);
-        if s2 = Lcode then
+  if RegGetSubkeyNames(RegistrationRoot, RegPhConv, Convertors) then
+    for Index := 0 to GetArrayLength(Convertors) - 1 do
+      if RegQueryStringValue(RegistrationRoot, RegPhConv + '\' + Convertors[Index] +
+        '\Attributes', 'Language', Languages) then
+        if Pos(';' + Uppercase(Lcode) + ';', ';' + Uppercase(Languages) + ';') > 0 then
           Result := 1;
-        if sLangs = Lcode then
-          Result := 1;
-        if Pos(';' + Lcode, sLangs) > 0 then
-          Result := 1;
-      end;
-    end;
-  end;
 end;
 
-// ensure the language number is included in a PhoneConvertor
 procedure SetPhoneConvertor(Lcode: String);
-var
-  done: Boolean;
-  s1: String;
-  sLangs: String;
+var Languages: String;
 begin
-  if CheckPhoneConvertors(Lcode) = 0 then
-  begin
-    done := False;
-    s1 := RegPhConv + '\Universal\Attributes';
-    if RegQueryStringValue(HKEY_LOCAL_MACHINE_32, s1, 'Language', sLangs) then
-    begin
-      done := RegWriteStringValue(HKEY_LOCAL_MACHINE_32, s1, 'Language', Lcode + ';' + sLangs);
-    end;
-
-    if done = False then
-    begin
-      s1 := RegPhConv + '\eSpeak\Attributes';
-      if RegQueryStringValue(HKEY_LOCAL_MACHINE_32, s1, 'Language', sLangs) = False then
-      begin
-        // add 'eSpeak' dummy PhoneConvertor
-        RegWriteStringValue(HKEY_LOCAL_MACHINE_32, RegPhConv + '\eSpeak', 'CLSID','{9185F743-1143-4C28-86B5-BFF14F20E5C8}');
-        RegWriteStringValue(HKEY_LOCAL_MACHINE_32, RegPhConv + '\eSpeak', 'PhoneMap','- 0001');
-        RegWriteStringValue(HKEY_LOCAL_MACHINE_32, s1, 'Language','');
-      end;
-      
-      if RegQueryStringValue(HKEY_LOCAL_MACHINE_32, s1, 'Language', sLangs) then
-      begin
-        done := RegWriteStringValue(HKEY_LOCAL_MACHINE_32, s1, 'Language', Lcode + ';' + sLangs);
-      end;
-    end;
-  end;
+  if CheckPhoneConvertors(Lcode) <> 0 then Exit;
+  Languages := '';
+  RegQueryStringValue(RegistrationRoot, RegistrationConverterPath + '\Attributes',
+    'Language', Languages);
+  // Keep changes inside the eSpeak-owned tree covered by the rollback snapshot.
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, RegistrationConverterPath,
+    'CLSID', '{9185F743-1143-4C28-86B5-BFF14F20E5C8}'));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, RegistrationConverterPath,
+    'PhoneMap', '- 0001'));
+  if Languages <> '' then Languages := ';' + Languages;
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, RegistrationConverterPath +
+    '\Attributes', 'Language', Lcode + Languages));
 end;
-
 
 #include "voice-gender.iss"
 
-procedure SetupVoice(Voice: String; Index: Integer);
+procedure SetupVoice(Voice, TokenName: String; Inflection: Cardinal);
 var
-  ix: Integer;
-  RegVoice2: String;
-  RegVoice2a: String;
-  VoiceUC: String;
-  Lcode: String;
-  
+  TokenPath, AttributesPath, VoiceUC, Lcode, Gender: String;
 begin
   Lcode := LanguageFromVoice(Voice);
-  
-  if Index = 0 then
-    RegVoice2 := RegVoice1
-  else
-    RegVoice2 := RegVoice1 + Format('_%d',[Index]);
-    
-  RegVoice2a := RegVoice2 + '\Attributes';
+  Gender := VoiceGender(ExpandConstant('{app}\espeak-data\voices'), Voice);
+  TokenPath := RegistrationVoicesPath + '\' + TokenName;
+  AttributesPath := TokenPath + '\Attributes';
+  if Voice = 'default' then VoiceUC := 'default' else VoiceUC := Uppercase(Voice);
 
-  if Voice = 'default' then
-    VoiceUC := 'default'
-  else
-    VoiceUC := Uppercase(Voice);
-
-  // check for duplicate voice names
-  for ix := 0 to n_voices_installed - 1 do begin
-    if voices_installed[ix] = VoiceUC then
-      Exit;
-  end;
-  if n_voices_installed < 200 then begin
-    voices_installed[n_voices_installed] := VoiceUC;
-    n_voices_installed := n_voices_installed + 1;
-  end;
-    
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'',sEspeak+VoiceUC);
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'CLSID','{BE985C8D-BE32-4A22-AA93-55C16A6D1D91}');
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'Path',ExpandConstant('{app}'));
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'VoiceName',Voice);
-  RegWriteDWordValue(HKEY_LOCAL_MACHINE_32,RegVoice2,'Inflection',50);
-
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Name',sEspeak+Voice);
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Gender',
-    VoiceGender(ExpandConstant('{app}\espeak-data\voices'), Voice));
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Age','Adult');
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Language',Lcode);
-  RegWriteStringValue(HKEY_LOCAL_MACHINE_32,RegVoice2a,'Vendor','http://espeak.sf.net');
-  
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, TokenPath, '', sEspeak + VoiceUC));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, TokenPath, 'CLSID',
+    '{BE985C8D-BE32-4A22-AA93-55C16A6D1D91}'));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, TokenPath, 'Path', ExpandConstant('{app}')));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, TokenPath, 'VoiceName', Voice));
+  RequireRegistration(RegWriteDWordValue(RegistrationRoot, TokenPath, 'Inflection', Inflection));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, AttributesPath, 'Name', sEspeak + Voice));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, AttributesPath, 'Gender', Gender));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, AttributesPath, 'Age', 'Adult'));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, AttributesPath, 'Language', Lcode));
+  RequireRegistration(RegWriteStringValue(RegistrationRoot, AttributesPath, 'Vendor', 'http://espeak.sf.net'));
   SetPhoneConvertor(Lcode);
 end;
-
 
 function ShouldInstallVario: Boolean;
 begin
@@ -419,51 +369,45 @@ end;
 
 
 
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  field: Integer;
-  Index: Integer;
-  ix: Integer;
-  ix2: Integer;
-  Line: String;
-  Voice: String;
-  Voice2: String;
-  separator: String;
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var Field: Integer;
 begin
-  if CurStep = ssPostInstall then
-  begin
-    separator := ' ';
-    Index := 0;
-    for field := 0 to 4 do begin
-      Line := Page.Values[field];
-      ix := 1;
-      ix2 := 1;
-      while ix2 > 0 do begin
-        ix2 := Pos(separator,Copy(Line,ix,999));
-
-        if ix2 = 0 then
-          Voice := Copy(Line,ix,999)
-        else
-          Voice := Copy(Line,ix,ix2-1);
-          
-        Voice2 := Trim(Voice);
-        if Voice2 <> '' then begin
-          SetUpVoice(Trim(Voice),Index);
-          Index := Index + 1;
-        end;
-        ix := ix + ix2;
-      end;
-    end;
+  Result := '';
+  try
+    // The user has accepted installation. Snapshot immediately before mutation,
+    // not while the welcome/license pages are still open.
+    ConfigureRegistration;
+    CaptureVoiceRegistration;
+    for Field := 0 to 4 do PlanVoiceLine(Page.Values[Field]);
+  except
+    Result := GetExceptionMessage;
   end;
 end;
 
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then ApplyVoiceRegistration;
+  if CurStep = ssDone then RegistrationCommitted := True;
+end;
+
+procedure DeinitializeSetup;
+begin
+  if RegistrationStarted and not RegistrationCommitted then
+    try
+      RestoreVoiceRegistration;
+    except
+      SuppressibleMsgBox(CustomMessage('RegistrationRollbackFailed'), mbError, MB_OK, IDOK);
+    end;
+end;
 
 procedure InitializeWizard;
 var
+  Index, Field: Integer;
   lang: String;
   voice2: String;
   uilang: String;
 begin
+  ConfigureRegistration;
   // Create the language selection page
 
   VarioPage := CreateInputOptionPage(wpWelcome,
@@ -499,42 +443,45 @@ begin
     Page.Values[0] := Format('%s',[UIVoice]);
   Page.Values[1] := Format('%s',[voice2]);
 
-  n_voices_installed := 0;
+  ReadRegisteredVoices;
+  if (GetArrayLength(OriginalTokens) > 0) or RegKeyExists(RegistrationRoot, RegUninstall) then
+  begin
+    for Field := 0 to 4 do Page.Values[Field] := '';
+    for Index := 0 to GetArrayLength(OriginalVoices) - 1 do
+    begin
+      Field := Index div 40;
+      if Field > 4 then Field := 4;
+      if Page.Values[Field] <> '' then Page.Values[Field] := Page.Values[Field] + ' ';
+      Page.Values[Field] := Page.Values[Field] + OriginalVoices[Index].Name;
+    end;
+  end;
 end;
 
 procedure ClearRegistry;
-var
-  Index: Integer;
-  RegVoice2: String;
-  exists: Boolean;
+var Names: TArrayOfString; Index: Integer;
 begin
-// remove all espeak voices from the registry
-  exists := True;
-  Index := 0;
-  while exists do begin
-    if Index = 0 then
-      RegVoice2 := RegVoice1
-    else
-      RegVoice2 := RegVoice1 + Format('_%d',[Index]);
-
-    exists := RegKeyExists(HKEY_LOCAL_MACHINE_32,RegVoice2);
-    RegDeleteKeyIncludingSubkeys(HKEY_LOCAL_MACHINE_32,RegVoice2);
-    Index := Index + 1;
-  end;
+  ConfigureRegistration;
+  Names := ManagedVoiceTokens;
+  for Index := 0 to GetArrayLength(Names) - 1 do
+    DeleteRegistrationTree(RegistrationVoicesPath + '\' + Names[Index]);
+  DeleteRegistrationTree(RegistrationConverterPath);
 end;
 
 function InitializeSetup: Boolean;
 begin
-// remove all espeak voices from the registry
-  ClearRegistry;
-  result := True;
+  // Opening or canceling the wizard must not change installed voices.
+  Result := True;
 end;
 
 function InitializeUninstall: Boolean;
 begin
-// remove all espeak voices from the registry
-  ClearRegistry;
-  result := True;
+  Result := True;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  // This stage is reached only after the user accepts actual uninstallation.
+  if CurUninstallStep = usPostUninstall then ClearRegistry;
 end;
 
 

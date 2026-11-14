@@ -15,6 +15,9 @@ rates. Fresh settings select smooth mode with the extended range disabled.
 Existing saved modes and the previous checkbox state are retained. Adding a
 voice uses the installation's saved setting; it does not reset existing choices.
 Turning off the extended range restores ordinary eSpeak speed regulation.
+Unchanged speech then uses the native engine without Sonic. A rate change
+during an utterance can still use Sonic to retime that speech within the
+ordinary range; this does not enable the saved extended-range setting.
 
 Available and installed voices are presented as checkable trees. Checking a
 language selects all of its voices, while expanding it permits individual
@@ -49,7 +52,9 @@ from the matching 32-bit or 64-bit registry view and migrated without deleting
 the original registry values. File values take precedence. A write error is
 reported; there is no AppData fallback. SAPI voice registration remains in
 the Windows registry because that is the operating system's voice interface.
-SAPI applications may need to be restarted after applying changes.
+SAPI applications may need to be restarted after applying changes. Surviving
+voices keep their SAPI token IDs when other voices are removed or reordered;
+a newly added voice does not take a removed voice's ID during that Apply.
 
 Apply is disabled until the installation is read successfully. Saving prepares
 and verifies the complete INI before any SAPI changes, snapshots only this
@@ -81,6 +86,9 @@ domyślnie wybierają tryb płynny i wyłączony rozszerzony zakres. Dodanie gł
 korzysta z zapisanego ustawienia instalacji i nie resetuje wyboru. Dotychczasowy
 zapisany tryb i stan pola wyboru pozostają zachowane. Wyłączenie rozszerzonego
 zakresu przywraca zwykłą regulację prędkości eSpeak.
+Niezmieniana mowa używa wtedy silnika natywnego bez Sonica. Zmiana szybkości
+w trakcie wypowiedzi może użyć Sonica do przeliczenia tej mowy w zwykłym
+zakresie; nie włącza to zapisanego ustawienia rozszerzonego zakresu.
 
 Menu Ustawienia można otworzyć klawiszem Alt lub F10. Pozwala wybrać jasny
 lub ciemny motyw, język zgodny z systemem, angielski albo polski oraz włączyć
@@ -123,6 +131,9 @@ lub utratą zasilania. Krótka blokada sesji i porównanie odczytanego stanu
 chronią przed sprzecznymi zmianami instancji Vario w tej samej sesji Windows;
 nie blokują innych sesji użytkowników. Płeć w metadanych SAPI pochodzi
 z definicji głosu i wariantu, z pierwszeństwem deklaracji wariantu.
+Pozostawione głosy zachowują identyfikatory SAPI po usunięciu innego głosu
+lub zmianie kolejności. Nowy głos nie przejmuje identyfikatora właśnie
+usuwanego głosu w tym samym Zastosuj.
 
 Vario jest jednoplikową aplikacją .NET 10 zależną od środowiska uruchomieniowego.
 Wymaga .NET Desktop Runtime 10 w architekturze zgodnej z wersją Vario: x64

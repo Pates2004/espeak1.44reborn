@@ -50,4 +50,19 @@ inline int NativeRate(int master, int fragment_adjustment, bool enabled, Mode mo
     const int tripled = base * 3;
     return tripled > 450 ? 450 : tripled;
 }
+
+inline int PlaybackRate(int master, int fragment_adjustment, bool enabled, Mode mode)
+{
+    if (enabled && mode == Mode::Smooth) return SmoothRate(master, fragment_adjustment);
+    const int target = Target(master, enabled, mode);
+    return target > 0 ? target : NativeRate(master, fragment_adjustment, enabled, mode);
+}
+
+inline float LiveRatio(int initial_master, int current_master, int fragment_adjustment,
+                      bool enabled, Mode mode, bool prepared, float preparation_factor, int prepared_rate)
+{
+    const int baseline = prepared ? prepared_rate : NativeRate(initial_master, fragment_adjustment, enabled, mode);
+    const float target = static_cast<float>(PlaybackRate(current_master, fragment_adjustment, enabled, mode));
+    return target * (prepared ? preparation_factor : 1.0f) / static_cast<float>(baseline);
+}
 } // namespace SonicSpeed

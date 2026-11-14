@@ -45,6 +45,13 @@ struct RecordedEvent {
 class TestSite final : public ISpTTSEngineSite {
 public:
     long rate = 0;
+    USHORT volume = 100;
+    bool changeRate = false;
+    bool changeVolume = false;
+    long changedRate = 0;
+    USHORT changedVolume = 100;
+    bool controlChanged = false;
+    size_t audioAtControlChange = 0;
     std::vector<BYTE> audio;
     std::vector<RecordedEvent> events;
     size_t textLength = 0;
@@ -102,6 +109,10 @@ public:
             }
             return SPVES_ABORT;
         }
+        if ((changeRate || changeVolume) && !controlChanged && audio.size() >= 8192) {
+            controlChanged = true;
+            audioAtControlChange = audio.size();
+        }
         return SPVES_RATE | SPVES_VOLUME;
     }
     HRESULT STDMETHODCALLTYPE Write(const void* data, ULONG length, ULONG* written) override {
@@ -119,12 +130,12 @@ public:
         *written = length;
         return S_OK;
     }
-    HRESULT STDMETHODCALLTYPE GetRate(long* value) override { *value = rate; return S_OK; }
-    HRESULT STDMETHODCALLTYPE GetVolume(USHORT* value) override { *value = 100; return S_OK; }
+    HRESULT STDMETHODCALLTYPE GetRate(long* value) override { *value = controlChanged && changeRate ? changedRate : rate; return S_OK; }
+    HRESULT STDMETHODCALLTYPE GetVolume(USHORT* value) override { *value = controlChanged && changeVolume ? changedVolume : volume; return S_OK; }
     HRESULT STDMETHODCALLTYPE GetSkipInfo(SPVSKIPTYPE*, long*) override { return E_NOTIMPL; }
     HRESULT STDMETHODCALLTYPE CompleteSkip(long) override { return S_OK; }
 
-    bool ValidateEvents(bool mixed) const {
+    bool ValidateEvents(bool mixed, bool requireFragmentContrast = true) const {
         ULONGLONG lastWord = 0;
         ULONGLONG lastViseme = 0;
         ULONGLONG lastBookmark = 0;
@@ -189,7 +200,8 @@ public:
         const ULONGLONG third = bookmarks[2].offset - bookmarks[1].offset;
         wprintf(L"Fragment PCM boundaries: %llu, %llu, %llu; words=%zu, visemes=%zu\n",
             first, second, third, words, visemes);
-        return second < first && second < third;
+        return first > 0 && second > 0 && third > 0 &&
+            (!requireFragmentContrast || (second < first && second < third));
     }
 };
 
@@ -248,13 +260,21 @@ int wmain(int argc, wchar_t** argv) {
 
     TestSite site;
     site.rate = _wtoi(argv[4]);
-    const bool mixed = argc == 6 && wcscmp(argv[5], L"mixed") == 0;
+    const std::wstring mode = argc == 6 ? argv[5] : L"";
+    site.changeRate = mode == L"liverateup" || mode == L"liveratedown" || mode == L"liverateup-abort" || mode == L"livemixed";
+    site.changeVolume = mode == L"mute" || mode == L"unmute";
+    site.changedRate = mode == L"liveratedown" ? -5 : 5;
+    site.volume = mode == L"unmute" || mode == L"volume0" ? 0 : mode == L"volume50" ? 50 : 100;
+    site.changedVolume = mode == L"mute" ? 0 : 100;
+    const bool mixed = mode == L"mixed" || mode == L"livemixed" || mode == L"mixedstatic";
+    const bool requireFragmentContrast = mode == L"mixed";
     const bool repeat = argc == 6 && wcscmp(argv[5], L"repeat") == 0;
     site.failOutput = argc == 6 && wcscmp(argv[5], L"failwrite") == 0;
     site.failEvents = argc == 6 && wcscmp(argv[5], L"failevents") == 0;
     site.zeroWrite = argc == 6 && wcscmp(argv[5], L"zerowrite") == 0;
     site.abortDuringSpeech = argc == 6 && (wcscmp(argv[5], L"abort") == 0 ||
-        wcscmp(argv[5], L"abortpartial") == 0 || wcscmp(argv[5], L"abortfirst") == 0);
+        wcscmp(argv[5], L"abortpartial") == 0 || wcscmp(argv[5], L"abortfirst") == 0 || mode == L"liverateup-abort");
+    if (mode == L"liverateup-abort") site.abortThreshold = 16384;
     if (argc == 6 && wcscmp(argv[5], L"abortfirst") == 0) site.abortThreshold = 0;
     if (argc == 6 && (wcscmp(argv[5], L"partialwrite") == 0 ||
         wcscmp(argv[5], L"abortpartial") == 0)) site.writeLimit = 510;
@@ -291,16 +311,41 @@ int wmain(int argc, wchar_t** argv) {
     bool nonzero = false;
     for (BYTE sample : site.audio) nonzero |= sample != 0;
     const bool expectsFailure = site.failOutput || site.failEvents || site.zeroWrite;
-    bool eventsPassed = !expectsFailure && !site.abortDuringSpeech && site.ValidateEvents(mixed);
+    bool eventsPassed = !expectsFailure && !site.abortDuringSpeech && site.ValidateEvents(mixed, requireFragmentContrast);
     bool passed = expectsFailure ? FAILED(result)
-        : SUCCEEDED(result) && nonzero && site.audio.size() > 1000 &&
+        : SUCCEEDED(result) && (mode == L"volume0" ? !nonzero : nonzero) && site.audio.size() > 1000 &&
             eventsPassed && (repeat || WriteWave(argv[3], site.audio));
+    if (site.changeVolume) {
+        bool prefixNonzero = false, tailNonzero = false;
+        for (size_t index = 0; index < site.audio.size(); index++) {
+            if (index < site.audioAtControlChange) prefixNonzero |= site.audio[index] != 0;
+            else tailNonzero |= site.audio[index] != 0;
+        }
+        const bool volumePassed = site.controlChanged && site.audioAtControlChange > 0 &&
+            (mode == L"mute" ? prefixNonzero && !tailNonzero : !prefixNonzero && tailNonzero);
+        passed = passed && volumePassed;
+        wprintf(L"Live volume: changed=%d, boundary=%zu, prefix=%d, tail=%d, passed=%d\n",
+            site.controlChanged, site.audioAtControlChange, prefixNonzero, tailNonzero, volumePassed);
+    }
+    if (site.changeRate && !site.abortDuringSpeech) {
+        TestSite reference;
+        reference.rate = site.rate;
+        reference.textLength = site.textLength;
+        const HRESULT referenceResult = engine->Speak(0, SPDFID_WaveFormatEx, &format,
+            mixed ? mixedFragments : &fragment, &reference);
+        const bool ratePassed = site.controlChanged && referenceResult == S_OK && reference.ValidateEvents(mixed, requireFragmentContrast) &&
+            (site.changedRate > site.rate ? site.audio.size() * 100 < reference.audio.size() * 92
+                : site.audio.size() * 100 > reference.audio.size() * 108);
+        passed = passed && ratePassed;
+        wprintf(L"Live rate: boundary=%zu, initial=%ld, changed=%ld, PCM=%zu, static PCM=%zu, passed=%d\n",
+            site.audioAtControlChange, site.rate, site.changedRate, site.audio.size(), reference.audio.size(), ratePassed);
+    }
     if (site.writeLimit != 0 && !site.abortDuringSpeech) passed = passed && site.writeCalls > 1;
     if (site.abortDuringSpeech || repeat) {
         const bool stopped = repeat ? passed : result == S_OK && site.abortReported &&
             site.audio.size() == site.audioAtAbort && site.events.size() == site.eventsAtAbort &&
             site.writesAfterAbort == 0 && site.eventsAfterAbort == 0 &&
-            (site.abortThreshold == 0 || !site.audio.empty());
+            (site.abortThreshold == 0 || !site.audio.empty()) && (!site.changeRate || site.controlChanged);
         TestSite resumed;
         resumed.rate = site.rate;
         resumed.textLength = site.textLength;

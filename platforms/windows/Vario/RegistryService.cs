@@ -115,14 +115,19 @@ internal sealed class RegistryService : IVoiceRegistry
         using RegistryKey tokens = machine.CreateSubKey(VoicesKey, writable: true)
             ?? throw new InvalidOperationException(UiText.VoiceRegistryUnavailable);
         string[] previousNames = GetManagedTokenNames(tokens).ToArray();
+        RegisteredVoice[] existing = previousNames.Select(name =>
+        {
+            using RegistryKey? token = tokens.OpenSubKey(name, writable: false);
+            return new RegisteredVoice(name, token?.GetValue("VoiceName") as string ?? string.Empty);
+        }).ToArray();
+        IReadOnlyList<PlannedVoice> plan = VoiceTokenPlan.Create(existing, voices);
         HashSet<string> desiredNames = new(StringComparer.OrdinalIgnoreCase);
 
-        for (int index = 0; index < voices.Length; index++)
+        foreach (PlannedVoice voice in plan)
         {
-            string keyName = index == 0 ? "eSpeak" : $"eSpeak_{index}";
-            desiredNames.Add(keyName);
-            WriteVoiceToken(tokens, keyName, voices[index], genders.Resolve(voices[index].Name));
-            EnsurePhoneConverter(LanguageFromVoice(voices[index].Name));
+            desiredNames.Add(voice.TokenName);
+            WriteVoiceToken(tokens, voice.TokenName, voice.Configuration, genders.Resolve(voice.Configuration.Name));
+            EnsurePhoneConverter(LanguageFromVoice(voice.Configuration.Name));
         }
 
         foreach (string obsolete in previousNames.Where(name => !desiredNames.Contains(name)))

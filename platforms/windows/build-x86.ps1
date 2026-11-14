@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$SkipInstaller,
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [string]$VerifiedAlternativeDictionary
 )
 
 . (Join-Path $PSScriptRoot '..\..\project_materials.ps1')
@@ -64,7 +65,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Keep the alternative number/stress dictionary bound to this release.
-& (Join-Path $projectRoot 'mydict\rebuild.ps1') -VerifyOnly
+& (Join-Path $projectRoot 'mydict\rebuild.ps1') -VerifyOnly -VerifiedAlternativeDictionary $VerifiedAlternativeDictionary
 
 if (-not $SkipTests) {
     & (Join-Path $PSScriptRoot 'test-polish-numbers.ps1') -EspeakExe $espeakExe -DataPath $projectRoot
@@ -121,8 +122,8 @@ Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'platforms\windows
 Copy-Item -LiteralPath (Join-ProjectMaterialPath $projectRoot 'License.txt') -Destination $resolvedStage
 
 if (-not $SkipInstaller) {
-    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r38.exe')) {
-        throw 'Classify the existing r38 installer before replacing it.'
+    if (Test-Path -LiteralPath (Join-Path $installerDir 'setup_espeak-1.44.05-x86-r39.exe')) {
+        throw 'Classify the existing r39 installer before replacing it.'
     }
     $isccCandidates = @(
         (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
@@ -144,5 +145,5 @@ if (-not $SkipInstaller) {
 Write-Host "Binaries: $releaseDir"
 Write-Host "Package:  $resolvedStage"
 if (-not $SkipInstaller) {
-    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r38.exe')"
+    Write-Host "Installer: $(Join-Path $installerDir 'setup_espeak-1.44.05-x86-r39.exe')"
 }

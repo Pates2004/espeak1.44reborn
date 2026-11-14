@@ -1,5 +1,27 @@
-eSpeak 1.44.05 r38 - Windows 32-bit (x86)
+eSpeak 1.44.05 r39 - Windows 32-bit (x86)
 ====================================
+
+r39: Opening/cancelling setup leaves voices intact. Upgrades preserve selected
+voices, their SAPI IDs and modulation, with rollback after a handled registry
+failure. Vario keeps surviving voice IDs. Live rate/volume changes now affect
+active SAPI speech in all speed modes; Stop discards buffered speech.
+Unchanged audible settings preserve static PCM. Live volume amplification uses
+the initial 16-bit render, so rounding/clipping can be amplified. Initial mute
+allows later unmute and can have slightly different silent timing from r38.
+Dictionaries and Sonic defaults are unchanged. With extended range off, only
+a live rate change can use Sonic within the ordinary range; static speech stays native.
+
+r39: Otwarcie/anulowanie instalatora nie usuwa głosów. Aktualizacja zachowuje
+wybór głosów, ich identyfikatory SAPI i modulację; obsługiwany błąd rejestru
+przywraca poprzednie wpisy. Vario zachowuje identyfikatory pozostałych głosów.
+Szybkość i głośność można zmienić w trakcie mowy we wszystkich trybach;
+Stop odrzuca buforowaną mowę. Bez zmiany słyszalnych ustawień PCM jest zachowany.
+Zwiększanie głośności w trakcie mowy może uwydatnić zaokrąglenia/przesterowanie
+początkowego renderowania 16-bitowego. Początkową ciszę można wyłączyć w trakcie
+mowy; jej długość może minimalnie różnić się od r38. Słowniki i domyślne
+ustawienia Sonica pozostają bez zmian. Przy wyłączonym rozszerzonym zakresie
+Sonic może obsłużyć zmianę szybkości w trakcie mowy w zwykłym zakresie;
+niezmieniana mowa pozostaje natywna.
 
 r38: Vario blocks Apply after a failed load, prepares settings before changing
 voices and rolls its registry entries back on a recoverable save failure.

@@ -10,6 +10,27 @@ internal static class FailureAndMetadataTests
         TestChanges(fixtures, check);
         TestChangeLock(check);
         TestGenders(repository, fixtures, check);
+        TestStableTokenIds(check);
+    }
+
+    private static void TestStableTokenIds(Action<bool, string> check)
+    {
+        RegisteredVoice[] before = { new("eSpeak", "pl"), new("eSpeak_1", "en"), new("eSpeak_7", "pl+f3") };
+        var remaining = VoiceTokenPlan.Create(before, new[] { new VoiceConfiguration("en", 75), new("pl+f3", 20) });
+        check(remaining[0].TokenName == "eSpeak_1" && remaining[1].TokenName == "eSpeak_7",
+            "Removing a voice preserves every surviving SAPI token identity.");
+        check(remaining[0].Configuration.Inflection == 75 && remaining[1].Configuration.Inflection == 20,
+            "Stable identities retain requested per-voice modulation.");
+        var reordered = VoiceTokenPlan.Create(before, new[] { new VoiceConfiguration("PL+F3", 50), new("EN", 50) });
+        check(reordered[0].TokenName == "eSpeak_7" && reordered[1].TokenName == "eSpeak_1",
+            "Reordering and casing do not renumber existing tokens.");
+        var added = VoiceTokenPlan.Create(before, new[] { new VoiceConfiguration("de", 50), new("en", 50) });
+        check(added[0].TokenName == "eSpeak_2" && added[1].TokenName == "eSpeak_1",
+            "A new voice does not steal an existing or just-removed voice identity.");
+        check(VoiceTokenPlan.Create(before, Array.Empty<VoiceConfiguration>()).Count == 0,
+            "Explicit removal of all voices produces no desired token.");
+        var fresh = VoiceTokenPlan.Create(Array.Empty<RegisteredVoice>(), new[] { new VoiceConfiguration("pl", 50), new("en", 50) });
+        check(fresh[0].TokenName == "eSpeak" && fresh[1].TokenName == "eSpeak_1", "Fresh registration retains conventional token names.");
     }
 
     private static void TestLoadFailures(string fixtures, Action<bool, string> check)

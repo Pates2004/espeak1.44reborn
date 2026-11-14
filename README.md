@@ -1,17 +1,52 @@
 > Current installers are in this checkout's `installfiles`. Build and useful diagnostic files are in `D:\work\Workspace\espeak1.44reborn`; audits in `D:\work\Forme\espeak1.44reborn`, previous builds in `D:\work\Snapshots\espeak1.44reborn`, and disposable files in `D:\work\Trash\espeak1.44reborn`. Scripts resolve these category paths automatically. Use `C:\work` only if drive D: does not exist.
 
-# eSpeak 1.44.05 Reborn — r38 (32-bit)
+# eSpeak 1.44.05 Reborn — r39 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r38 project:
+eSpeak r39 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r38` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r39` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
+
+## Release r39 / Wydanie r39
+
+Opening or cancelling the installer leaves registered voices intact. Upgrades
+retain selected voices, their SAPI token IDs and per-voice modulation; a handled
+registration failure restores the previous owned entries. Vario also keeps the
+IDs of surviving voices when another voice is removed or the list is reordered.
+SAPI rate and volume changes now affect the current utterance, including Sonic
+modes, while Stop discards buffered speech. Sonic defaults and dictionaries
+are unchanged.
+With extended range disabled, unchanged speech stays native; a rate change
+during speech can still use Sonic to retime that utterance within the ordinary
+range. This does not turn on the saved extended-range checkbox.
+
+Otwarcie lub anulowanie instalatora nie usuwa zarejestrowanych głosów.
+Aktualizacja zachowuje wybór głosów, ich identyfikatory SAPI i modulację;
+obsługiwany błąd rejestracji przywraca poprzednie własne wpisy. Vario zachowuje
+też identyfikatory pozostałych głosów po usunięciu innego głosu lub zmianie
+kolejności. Zmiany szybkości i głośności SAPI działają w bieżącej wypowiedzi,
+także z Sonikiem; Stop odrzuca buforowaną mowę. Domyślne ustawienia Sonica
+i słowniki pozostają bez zmian.
+Przy wyłączonym rozszerzonym zakresie niezmieniana mowa pozostaje natywna;
+zmiana szybkości w trakcie wypowiedzi może użyć Sonica do jej przeliczenia
+w zwykłym zakresie. Nie włącza to zapisanego pola rozszerzonego zakresu.
+
+Static speech retains the previous PCM at unchanged audible gain. Live volume
+uses the initial native render: increasing a low initial gain may magnify its
+16-bit rounding or clipping. Initially muted speech renders internally before
+muting so it can be unmuted; its silent duration can differ slightly from r38.
+
+Przy niezmienianej słyszalnej głośności zachowano dotychczasowy PCM. Regulacja
+w trakcie mowy korzysta z początkowego renderowania: zwiększenie małej
+głośności może uwydatnić zaokrąglenia 16-bitowe lub przesterowanie. Początkowe
+wyciszenie następuje na wyjściu, aby dało się później włączyć dźwięk; długość
+tej ciszy może minimalnie różnić się od r38.
 
 ## Release r38 / Wydanie r38
 

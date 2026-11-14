@@ -4,10 +4,14 @@ param(
     [string]$DataPath,
     [switch]$InstallDefault,
     [switch]$CheckOnly,
-    [switch]$VerifyOnly
+    [switch]$VerifyOnly,
+    [string]$VerifiedAlternativeDictionary
 )
 
 $ErrorActionPreference = 'Stop'
+if ($VerifiedAlternativeDictionary -and -not $VerifyOnly) {
+    throw 'An alternative binary override is read-only and permitted only with VerifyOnly.'
+}
 if (($CheckOnly -and $InstallDefault) -or ($VerifyOnly -and ($CheckOnly -or $InstallDefault))) {
     throw 'Choose one verification or installation mode.'
 }
@@ -111,6 +115,9 @@ if (Test-Path -LiteralPath $canonicalSource) {
 }
 
 $legacyBinary = Join-Path $PSScriptRoot 'pl.dict'
+if ($VerifiedAlternativeDictionary) {
+    $legacyBinary = (Resolve-Path -LiteralPath $VerifiedAlternativeDictionary).Path
+}
 $defaultBinary = Join-Path $productData 'pl_dict'
 $dictionaryManifestPath = Join-Path $PSScriptRoot 'dictionary-manifest.json'
 $sourcePaths = @('dictsource/pl_list', 'dictsource/pl_rules', 'careful-stress-rules.txt')
