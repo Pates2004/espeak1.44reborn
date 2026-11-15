@@ -86,7 +86,7 @@ $pattern = '(?m)^(' + [regex]::Escape($collage) + '[\t ]+)\$1$'
 if ([regex]::Matches($defaultList, $pattern).Count -ne 1) { throw 'Expected one alternative collage stress preference.' }
 $defaultList = [regex]::Replace($defaultList, $pattern, { param($match) $match.Groups[1].Value + '$2' })
 
-# Restore exactly the reviewed noun rules, never the verb stress rules.
+# Restore the reviewed noun map first, then the separate verb/clitic map.
 $defaultRules = Read-DictionarySource (Join-Path $legacySource 'pl_rules')
 $carefulRulesPath = Join-Path $PSScriptRoot 'careful-stress-rules.txt'
 $carefulRules = @((Read-DictionarySource $carefulRulesPath) -split "`n" | Where-Object { $_.Length -gt 0 })
@@ -106,6 +106,23 @@ foreach ($careful in $carefulRules) {
     }
     $defaultRules = [regex]::Replace($defaultRules, $pattern, { $careful })
 }
+$verbRulesPath = Join-Path $PSScriptRoot 'careful-verb-stress-rules.txt'
+$verbRules = @((Read-DictionarySource $verbRulesPath) -split "`n" | Where-Object { $_.Length -gt 0 })
+if ($verbRules.Count -ne 54 -or @($verbRules | Select-Object -Unique).Count -ne 54) {
+    throw 'The approved verb/clitic stress map must contain exactly 54 unique rules.'
+}
+foreach ($careful in $verbRules) {
+    if ($careful -notmatch '=;?[aEiyu]$' -or
+        $careful -notmatch '\((?:C?\u0142by[\u015bm]?|by(?:m|\u015b(?:my|cie)?)?|\u015b(?:my|cie)|liby(?:\u015b(?:my|cie))?|\u0142yby(?:\u015b(?:my|cie))?)_') {
+        throw "An unapproved rule entered the verb/clitic stress map: $careful"
+    }
+    $colloquial = $careful -replace '=(;?[aEiyu])$', '$1'
+    $pattern = '(?m)^' + [regex]::Escape($colloquial) + '$'
+    if ([regex]::Matches($defaultRules, $pattern).Count -ne 1) {
+        throw "Expected exactly one colloquial verb/clitic rule: $colloquial"
+    }
+    $defaultRules = [regex]::Replace($defaultRules, $pattern, { $careful })
+}
 $canonicalSource = Join-Path $projectRoot 'dictsource'
 if (Test-Path -LiteralPath $canonicalSource) {
     if ((Read-DictionarySource (Join-Path $canonicalSource 'pl_list')) -cne $defaultList -or
@@ -120,7 +137,7 @@ if ($VerifiedAlternativeDictionary) {
 }
 $defaultBinary = Join-Path $productData 'pl_dict'
 $dictionaryManifestPath = Join-Path $PSScriptRoot 'dictionary-manifest.json'
-$sourcePaths = @('dictsource/pl_list', 'dictsource/pl_rules', 'careful-stress-rules.txt')
+$sourcePaths = @('dictsource/pl_list', 'dictsource/pl_rules', 'careful-stress-rules.txt', 'careful-verb-stress-rules.txt')
 if ($VerifyOnly) {
     $dictionaryManifest = Get-Content -LiteralPath $dictionaryManifestPath -Raw | ConvertFrom-Json
     foreach ($relativePath in $sourcePaths) {
@@ -128,7 +145,7 @@ if ($VerifyOnly) {
             throw "Dictionary source changed without rebuilding both variants: $relativePath"
         }
     }
-    if (@($dictionaryManifest.SourceSHA256.PSObject.Properties).Count -ne 3 -or
+    if (@($dictionaryManifest.SourceSHA256.PSObject.Properties).Count -ne $sourcePaths.Count -or
         (Get-FileHash -LiteralPath $legacyBinary).Hash -cne $dictionaryManifest.LegacySHA256 -or
         (Get-FileHash -LiteralPath $defaultBinary).Hash -cne $dictionaryManifest.DefaultSHA256) {
         throw 'A dictionary is stale or does not match the verified pair.'

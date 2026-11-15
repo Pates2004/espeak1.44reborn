@@ -1,17 +1,35 @@
 > Current installers are in this checkout's `installfiles`. Build and useful diagnostic files are in `D:\work\Workspace\espeak1.44reborn`; audits in `D:\work\Forme\espeak1.44reborn`, previous builds in `D:\work\Snapshots\espeak1.44reborn`, and disposable files in `D:\work\Trash\espeak1.44reborn`. Scripts resolve these category paths automatically. Use `C:\work` only if drive D: does not exist.
 
-# eSpeak 1.44.05 Reborn — r39 (32-bit)
+# eSpeak 1.44.05 Reborn — r40 (32-bit)
 
 This repository is the 32-bit Windows companion to the native 64-bit
-eSpeak r39 project:
+eSpeak r40 project:
 
 <https://github.com/Pates2004/espeak-1.44.05-x64>
 
 It keeps the same eSpeak 1.44.05 speech engine, Polish dictionary and rule
 updates, while providing a native Win32 build for compatibility with 32-bit
-applications and SAPI clients.  The `r39` label follows the 64-bit baseline;
+applications and SAPI clients.  The `r40` label follows the 64-bit baseline;
 this repository is the matching 32-bit build rather than a separate language
 or engine revision.
+
+## Release r40 / Wydanie r40
+
+The Polish dictionary corrects stress in nouns such as `sataniście`,
+`pianiście` and `soliście`, without treating them as past-tense verbs.
+The default dictionary keeps careful verb stress; the complete alternative
+dictionary in [mydict](mydict/README.md) adds the agreed colloquial penultimate
+stress for past and conditional forms. Both include genuine pronunciation fixes.
+The two existing number styles are retained. Speech controls and Vario behavior
+are unchanged.
+
+Polski słownik poprawia akcent rzeczowników takich jak „sataniście”,
+„pianiście” i „soliście”, bez traktowania ich jak czasowników w czasie przeszłym.
+Domyślny słownik zachowuje staranny akcent czasowników; pełny słownik alternatywny
+w [mydict](mydict/README.pl.md) dodaje uzgodniony potoczny akcent przedostatni
+form przeszłych i przypuszczających. Oba zawierają poprawki rzeczywistych błędów.
+Zachowano dwa dotychczasowe warianty liczb. Sterowanie mową i działanie Vario
+pozostają bez zmian.
 
 ## Release r39 / Wydanie r39
 

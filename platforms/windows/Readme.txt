@@ -1,5 +1,17 @@
-eSpeak 1.44.05 r39 - Windows 32-bit (x86)
+eSpeak 1.44.05 r40 - Windows 32-bit (x86)
 ====================================
+
+r40: Polish noun stress corrections include sataniście, pianiście and soliście.
+The default dictionary retains careful verb stress. The complete alternative
+dictionary in the source repository's mydict directory adds the agreed regular
+colloquial stress for past and conditional forms. Genuine errors are corrected
+in both styles; existing numeric styles and speech controls are retained.
+
+r40: Poprawiono akcent rzeczowników, m.in. sataniście, pianiście i soliście.
+Domyślny słownik zachowuje staranne akcentowanie czasowników. Pełny słownik
+alternatywny w katalogu mydict repozytorium źródłowego dodaje uzgodniony regularny
+akcent potoczny form przeszłych i przypuszczających. Rzeczywiste błędy poprawiono
+w obu wersjach; zachowano dotychczasowe warianty liczb i sterowanie mową.
 
 r39: Opening/cancelling setup leaves voices intact. Upgrades preserve selected
 voices, their SAPI IDs and modulation, with rollback after a handled registry
